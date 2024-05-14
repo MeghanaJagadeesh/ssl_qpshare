@@ -42,5 +42,4 @@ public class QuantumShareUserDao {
 	public QuantumShareUser findByVerificationToken(String token) {
 		return userRespository.findByVerificationToken(token);
 	}
-
 }

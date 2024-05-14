@@ -13,8 +13,6 @@ import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.response.ResponseStructure;
 import com.qp.quantum_share.services.QuantumShareUserService;
 
-import jakarta.servlet.http.HttpSession;
-
 @RestController
 @RequestMapping("/quantum-socialshare/user")
 public class QuantumShareUserController {
@@ -23,10 +21,10 @@ public class QuantumShareUserController {
 	QuantumShareUserService quantumShareUserService;
 
 	@PostMapping("/login")
-	public ResponseEntity<ResponseStructure<String>> userLogin(@RequestParam String emph, @RequestParam String password,
-			HttpSession session) {
+	public ResponseEntity<ResponseStructure<String>> userLogin(@RequestParam String emph,
+			@RequestParam String password) {
 		System.out.println("emph" + emph + " password : " + password);
-		return quantumShareUserService.login(emph, password, session);
+		return quantumShareUserService.login(emph, password);
 	}
 
 	@PostMapping("/signup")
@@ -42,6 +40,7 @@ public class QuantumShareUserController {
 
 	@GetMapping("/verify")
 	public ResponseEntity<ResponseStructure<String>> verifyEmail(@RequestParam("token") String token) {
+		System.out.println(token);
 		return quantumShareUserService.verifyEmail(token);
 	}
 

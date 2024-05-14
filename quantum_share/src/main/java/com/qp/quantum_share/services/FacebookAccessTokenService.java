@@ -2,6 +2,7 @@ package com.qp.quantum_share.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -89,9 +90,19 @@ public class FacebookAccessTokenService {
 			if (fbUser != null) {
 				JsonNode fbuser = objectMapper.readTree(fbUser);
 				String lastUserId = faceBookUserDao.findLastUserId();
-				String id = generateId.generateFbId(lastUserId);
+				String id;
+				FaceBookUser exfbUser = null;
+				List<FacebookPageDetails> existList = null;
+				if (user.getSocialAccounts() == null || user.getSocialAccounts().getFacebookUser() == null) {
+					id = generateId.generateFbId(lastUserId);
+				} else {
+					id = user.getSocialAccounts().getFacebookUser().getFbId();
+					exfbUser = facebookDao.findById(id);
+					existList = exfbUser.getPageDetails();
+				}
+				System.out.println("existList " + existList);
 				System.out.println("generateId.generateFbId()  " + id);
-				socialAccounts.setFbId(id);
+//				socialAccounts.set(id);
 //				mainuser.setName("testUser");
 
 				faceBookUser.setFbId(id);
@@ -105,15 +116,29 @@ public class FacebookAccessTokenService {
 				String pictureUrl = fbuser.has("picture") ? fbuser.get("picture").get("data").get("url").asText()
 						: null;
 				faceBookUser.setPictureUrl(pictureUrl);
+				SocialAccounts accounts = user.getSocialAccounts();
+				if(accounts==null) {
+					socialAccounts.setFacebookUser(faceBookUser);
+					user.setSocialAccounts(socialAccounts);
+				}else if(accounts.getFacebookUser()==null) {
+					accounts.setFacebookUser(faceBookUser);
+				}
+//				socialAccounts.setFacebookUser(faceBookUser);			
+//				if (exfbUser != null && !exfbUser.getPageDetails().isEmpty()) {
+//					// Clear existing Facebook pages before adding new ones (Method 2)
+//					exfbUser.setPageDetails(new ArrayList<>());
+//					facebookDao.saveUser(exfbUser); // Save the updated FaceBookUser with empty list
+//				}
+				List<FacebookPageDetails> pageList = new ArrayList<>();
 				if (userPage != null) {
 					JsonNode fbuserPage = objectMapper.readTree(userPage);
 					JsonNode data = fbuserPage.get("data");
 
 					if (data != null && data.isArray()) {
-						List<FacebookPageDetails> list = new ArrayList<>();
+						int numberOfPages = data.size();
+						
 						for (JsonNode page : data) {
 							FacebookPageDetails pages = configuration.pageDetails();
-
 							pages.setFbPageId(page.has("id") ? page.get("id").asText() : null);
 							pages.setPageName(page.get("name") != null ? page.get("name").asText() : null);
 							pages.setFbPageAceessToken(
@@ -122,23 +147,30 @@ public class FacebookAccessTokenService {
 									&& page.get("instagram_business_account").has("id")
 											? page.get("instagram_business_account").get("id").asText()
 											: null);
-							pageDao.savePage(pages);
-							list.add(pages);
+//							pageDao.savePage(pages);
+
+							pageList.add(pages);
 						}
-						faceBookUser.setPageDetails(list);
+						faceBookUser.setPageDetails(pageList);
+						faceBookUser.setNoOfFbPages(numberOfPages);
 					}
-
 				}
-				facebookDao.saveUser(faceBookUser);
-				accountDao.save(socialAccounts);
-				user.setSocialAccounts(socialAccounts);
+//				facebookDao.saveUser(faceBookUser);
+//				accountDao.save(socialAccounts);
+				
 				userDao.save(user);
-
 				structure.setCode(HttpStatus.CREATED.value());
-				structure.setMessage("login successfully");
+				structure.setMessage("Facebook Connected Successfully");
 				structure.setStatus("success");
 				structure.setPlatform("facebook");
-				structure.setData(facebookDao.findById(user.getSocialAccounts().getFbId()).getPictureUrl());
+				System.out.println("*******************************");
+				Map<String, Object> data = configuration.getMap();
+				FaceBookUser datauser = user.getSocialAccounts().getFacebookUser();
+				data.put("facebookUrl", datauser.getPictureUrl());
+				data.put("facebookUsername", datauser.getFbuserUsername());
+				data.put("facebookNumberofpages", datauser.getNoOfFbPages());
+				data.put("pages", pageList);
+				structure.setData(data);
 				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.CREATED);
 			} else {
 				structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -150,6 +182,7 @@ public class FacebookAccessTokenService {
 		} catch (JsonProcessingException e) {
 			throw new CommonException(e.getMessage());
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new CommonException(e.getMessage());
 		}
 	}
@@ -177,7 +210,6 @@ public class FacebookAccessTokenService {
 			return response.getBody();
 		else
 			return null;
-
 	}
 
 	public String getAuthorizationUrl() {

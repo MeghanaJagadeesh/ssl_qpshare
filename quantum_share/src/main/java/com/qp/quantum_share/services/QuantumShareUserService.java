@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.helper.GenerateId;
+import com.qp.quantum_share.helper.JwtToken;
 import com.qp.quantum_share.helper.SecurePassword;
 import com.qp.quantum_share.helper.SendMail;
 import com.qp.quantum_share.response.ResponseStructure;
@@ -35,8 +36,11 @@ public class QuantumShareUserService {
 
 	@Autowired
 	SendMail sendMail;
+	
+	@Autowired
+	JwtToken token;
 
-	public ResponseEntity<ResponseStructure<String>> login(String emph, String password, HttpSession session) {
+	public ResponseEntity<ResponseStructure<String>> login(String emph, String password) {
 		long mobile = 0;
 		String email = null;
 		try {
@@ -54,13 +58,12 @@ public class QuantumShareUserService {
 		} else {
 			QuantumShareUser user = users.get(0);
 			if (SecurePassword.decrypt(user.getPassword(), "123").equals(password)) {
-				System.out.println("password corrext");
 				if (user.isVerified()) {
-					session.setAttribute("qsuser", user);
+					String tokenValue = token.generateJWT(user);
 					structure.setCode(HttpStatus.OK.value());
 					structure.setMessage("Login Successful");
 					structure.setStatus("success");
-					structure.setData(user);
+					structure.setData(tokenValue);
 					return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
 
 				} else {
@@ -68,9 +71,7 @@ public class QuantumShareUserService {
 					String verificationToken = UUID.randomUUID().toString();
 					user.setVerificationToken(verificationToken);
 					userDao.save(user);
-					System.out.println("______");
 					sendMail.sendVerificationEmail(user);
-					System.out.println("_______");
 					structure.setCode(HttpStatus.NOT_ACCEPTABLE.value());
 					structure.setMessage("please verify your email, email has been sent.");
 					structure.setStatus("error");
@@ -120,13 +121,14 @@ public class QuantumShareUserService {
 
 	public ResponseEntity<ResponseStructure<String>> verifyEmail(String token) {
 		QuantumShareUser user = userDao.findByVerificationToken(token);
+		System.out.println(user);
 		if (user != null) {
 			user.setVerified(true);
 			user.setSignUpDate(LocalDate.now());
 			userDao.saveUser(user);
 
 			structure.setCode(HttpStatus.CREATED.value());
-			structure.setStatus("Email verified successfully! Redirecting to login page...");
+			structure.setStatus("success");
 			structure.setMessage("successfully signedup");
 			structure.setData(user);
 			return new ResponseEntity<ResponseStructure<String>>(HttpStatus.CREATED);

@@ -1,5 +1,7 @@
 package com.qp.quantum_share.services;
 
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -173,7 +175,6 @@ public class InstagramService {
 					errorResponse.setPlatform("instgram");
 					return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(errorResponse),
 							HttpStatus.INTERNAL_SERVER_ERROR);
-
 				}
 			} else {
 				structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
@@ -250,10 +251,10 @@ public class InstagramService {
 
 	public ResponseEntity<ResponseStructure<String>> verifyToken(String access_token, QuantumShareUser user) {
 		String instaId = fetchID(access_token);
-		String username = null;
+		JsonNode instaUser = null;
 		ResponseEntity<String> profile = null;
 		if (instaId != null) {
-			username = fetchUsername(instaId, access_token);
+			instaUser = fetchUsername(instaId, access_token);
 		} else {
 			structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 			structure.setMessage("Something went wrong, please try again later");
@@ -262,6 +263,7 @@ public class InstagramService {
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+		String username = instaUser.get("username").asText();
 		if (instaId != null && username != null) {
 			profile = fetchProfile(instaId, username, access_token);
 		} else {
@@ -272,33 +274,59 @@ public class InstagramService {
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		return saveInstaUser(instaId, username, profile, access_token, user);
+		System.out.println("coming");
+		return saveInstaUser(instaId, username, profile, access_token, user, instaUser);
 	}
 
 	private ResponseEntity<ResponseStructure<String>> saveInstaUser(String instaId, String username,
-			ResponseEntity<String> profile, String access_token, QuantumShareUser user) {
+			ResponseEntity<String> profile, String access_token, QuantumShareUser user, JsonNode instaUser) {
 		try {
 			String lastUserId = instagramUserDao.findLastUserId();
-			String id = generateId.generateinstaId(lastUserId);
+			String id = null;
+			System.out.println(user);
+			if (user.getSocialAccounts() == null || user.getSocialAccounts().getInstagramUser() == null) {
+				System.out.println("if block");
+				id = generateId.generateinstaId(lastUserId);
+			} else {
+				id = user.getSocialAccounts().getInstagramUser().getInstaId();
+			}
 			instagramUser.setInstaId(id);
 			instagramUser.setInstaUserId(instaId);
 			instagramUser.setInstaUsername(username.replace("\"", ""));
-			System.out.println("save user");
+			instagramUser.setFollwersCount(instaUser.get("followers_count").asInt());
 			JsonNode jsonResponse = objectMapper.readTree(profile.getBody());
 			instagramUser.setPictureUrl(
 					jsonResponse.has("profile_picture_url") ? jsonResponse.get("profile_picture_url").asText() : null);
 			instagramUser.setInstUserAccessToken(access_token);
-			instagramUserDao.save(instagramUser);
-			socialAccounts.setInstaId(id);
-			accountDao.save(socialAccounts);
-			user.setSocialAccounts(socialAccounts);
+//			instagramUserDao.save(instagramUser);
+			SocialAccounts accounts = user.getSocialAccounts();
+			System.out.println("accounts :" + accounts);
+			if (accounts == null) {
+				socialAccounts.setInstagramUser(instagramUser);
+				user.setSocialAccounts(socialAccounts);
+			} else {
+				System.out.println(")))))))))else");
+				if (accounts.getInstagramUser() == null) {
+					accounts.setInstagramUser(instagramUser);
+					user.setSocialAccounts(accounts);
+				}
+			}
+
+//			accountDao.save(socialAccounts);
+//			user.setSocialAccounts(accounts);
 			userDao.save(user);
 
 			structure.setCode(HttpStatus.CREATED.value());
 			structure.setMessage("Instagram Connected Successfully");
 			structure.setStatus("success");
 			structure.setPlatform("instagram");
-			structure.setData(instagramUserDao.findById(user.getSocialAccounts().getInstaId()).getPictureUrl());
+			Map<String, Object> data = configuration.getMap();
+			InstagramUser datauser = instagramUserDao
+					.findById(user.getSocialAccounts().getInstagramUser().getInstaId());
+			data.put("instagramUrl", datauser.getPictureUrl());
+			data.put("InstagramUsername", datauser.getInstaUsername());
+			data.put("Instagram_follwers_count", datauser.getFollwersCount());
+			structure.setData(data);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.CREATED);
 
 		} catch (JsonMappingException e) {
@@ -326,6 +354,7 @@ public class InstagramService {
 			HttpEntity<String> requestEntity = configuration.getHttpEntity(headers);
 			ResponseEntity<String> response = restTemplate.exchange(fetchAPI, HttpMethod.GET, requestEntity,
 					String.class);
+			System.out.println(response);
 			return response;
 		} catch (BadRequest e) {
 			throw new BadRequestException(e.getMessage());
@@ -333,7 +362,7 @@ public class InstagramService {
 
 	}
 
-	private String fetchUsername(String instaId, String access_token) {
+	private JsonNode fetchUsername(String instaId, String access_token) {
 		try {
 			String fetchAPI = "https://graph.facebook.com/v19.0/" + instaId
 					+ "?fields=id,name,followers_count,username,website,follows_count";
@@ -343,7 +372,7 @@ public class InstagramService {
 					String.class);
 			System.out.println(response.getBody());
 			JsonNode responseJson = objectMapper.readTree(response.getBody());
-			return responseJson.get("username").toString();
+			return responseJson;
 
 		} catch (JsonMappingException e) {
 			throw new CommonException(e.getMessage());

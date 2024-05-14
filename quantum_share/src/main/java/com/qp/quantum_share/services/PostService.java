@@ -47,9 +47,9 @@ public class PostService {
 			SocialAccounts socialAccounts) {
 
 		if (mediaPost.getMediaPlatform().contains("facebook")) {
-			if (socialAccounts == null || socialAccounts.getFbId() != null)
+			if (socialAccounts == null || socialAccounts.getFacebookUser().getFbId() != null)
 				return facebookPostService.postMediaToPage(mediaPost, mediaFile,
-						facebookUserDao.findById(socialAccounts.getFbId()));
+						facebookUserDao.findById(socialAccounts.getFacebookUser().getFbId()));
 			else {
 				structure.setMessage("Please connect your facebook account");
 				structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -66,9 +66,9 @@ public class PostService {
 			SocialAccounts socialAccounts) {
 		System.out.println("main service");
 		if (mediaPost.getMediaPlatform().contains("instagram")) {
-			if (socialAccounts == null || socialAccounts.getInstaId() != null)
+			if (socialAccounts == null || socialAccounts.getInstagramUser().getInstaId() != null)
 				return instagramService.postMediaToPage(mediaPost, mediaFile,
-						instagramUserDao.findById(socialAccounts.getInstaId()));
+						instagramUserDao.findById(socialAccounts.getInstagramUser().getInstaId()));
 			else {
 				structure.setMessage("Please connect your Instagram account");
 				structure.setCode(HttpStatus.NOT_FOUND.value());

@@ -1,5 +1,7 @@
 package com.qp.quantum_share.dao;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +16,12 @@ public class FaceBookPageDao {
 
 	public void savePage(FacebookPageDetails pageDetails) {
 		facebookPageRepository.save(pageDetails);
+	}
+
+	public void deletePage(List<FacebookPageDetails> pages) {
+		for(FacebookPageDetails page:pages) {
+			facebookPageRepository.delete(page);
+		}
 	}
 
 //	public String findLastPageId() {

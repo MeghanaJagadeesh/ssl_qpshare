@@ -15,11 +15,12 @@ public class QuantumShareApplication {
 
 	@Bean
 	public WebMvcConfigurer configurer() {
+
 		return new WebMvcConfigurer() {
 			@Override
 			public void addCorsMappings(CorsRegistry reg) {
 				reg.addMapping("/**").allowedOrigins("*");
-			}   
+			}
 		};
 	}
 }

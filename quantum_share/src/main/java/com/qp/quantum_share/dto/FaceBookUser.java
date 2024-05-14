@@ -4,15 +4,16 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import lombok.Data;
 
-@Entity
 @Data
 @Component
+@Entity
 public class FaceBookUser {
 
 	@Id
@@ -23,6 +24,7 @@ public class FaceBookUser {
 	private String lastName;
 	private String email;
 	private String birthday;
+	private int noOfFbPages;
 
 	@Column(length = 4000)
 	private String pictureUrl;
@@ -30,8 +32,8 @@ public class FaceBookUser {
 	@Column(length = 2000)
 	private String userAccessToken;
 
-//	@OneToMany(mappedBy = "faceBookUser", cascade = CascadeType.PERSIST) // Optional for persisting page details
-	@OneToMany
+	@OneToMany(cascade=CascadeType.ALL)
+//	@OneToMany
 	private List<FacebookPageDetails> pageDetails;
 
 }

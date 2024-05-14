@@ -28,6 +28,7 @@ public class GenerateId {
 	}
 
 	public String generateinstaId(String lastUserId) {
+		System.out.println("id generate method");
 		String userId;
 		if (lastUserId == null) {
 			userId = "QSINS2401";

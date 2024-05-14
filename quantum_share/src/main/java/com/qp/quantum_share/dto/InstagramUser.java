@@ -16,6 +16,7 @@ public class InstagramUser {
 	private String instaId;
 	private String instaUserId;
 	private String instaUsername;
+	private int follwersCount;
 
 	@Column(length = 4000)
 	private String pictureUrl;

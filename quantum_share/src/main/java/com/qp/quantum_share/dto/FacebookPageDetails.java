@@ -1,5 +1,7 @@
 package com.qp.quantum_share.dto;
 
+import org.springframework.stereotype.Component;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,6 +11,7 @@ import lombok.Data;
 
 @Data
 @Entity
+@Component
 public class FacebookPageDetails {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

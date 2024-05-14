@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.qp.quantum_share.configuration.ConfigurationClass;
+import com.qp.quantum_share.configuration.JwtUtilConfig;
 import com.qp.quantum_share.dao.FacebookUserDao;
+import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dto.MediaPost;
 import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.exception.CommonException;
@@ -18,7 +20,7 @@ import com.qp.quantum_share.response.ResponseStructure;
 import com.qp.quantum_share.response.ResponseWrapper;
 import com.qp.quantum_share.services.PostService;
 
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/quantum-share")
@@ -36,22 +38,43 @@ public class PostController {
 	@Autowired
 	ConfigurationClass configuration;
 
+	@Autowired
+	JwtUtilConfig jwtUtilConfig;
+
+	@Autowired
+	HttpServletRequest request;
+
+	@Autowired
+	QuantumShareUserDao userDao;
+
 	@PostMapping("/post/file/facebook")
-	public ResponseEntity<ResponseWrapper> postToFacebook(MultipartFile mediaFile, @ModelAttribute MediaPost mediaPost,
-			HttpSession session) {
-		QuantumShareUser user = (QuantumShareUser) session.getAttribute("qsuser");
+	public ResponseEntity<ResponseWrapper> postToFacebook(MultipartFile mediaFile,
+			@ModelAttribute MediaPost mediaPost) {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+					HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		String userId = jwtUtilConfig.extractUserId(jwtToken);
+		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
-			structure.setMessage("Session has expired, Please login");
+			structure.setMessage("user doesn't exists, please signup");
 			structure.setStatus("error");
 			structure.setData(null);
 			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
 					HttpStatus.NOT_FOUND);
 		}
-
+		System.out.println(user.getSocialAccounts());
 		try {
 			System.out.println(mediaPost.getMediaPlatform());
-			if (mediaPost.getMediaPlatform() == null ) {
+			if (mediaPost.getMediaPlatform() == null) {
 				structure.setCode(HttpStatus.BAD_REQUEST.value());
 				structure.setStatus("error");
 				structure.setMessage("select social media platforms");
@@ -66,23 +89,32 @@ public class PostController {
 			throw new CommonException(e.getMessage());
 		}
 	}
-	
+
 	@PostMapping("/post/file/instagram")
-	public ResponseEntity<ResponseWrapper> postToInsta(MultipartFile mediaFile, @ModelAttribute MediaPost mediaPost,
-			HttpSession session) {
-		QuantumShareUser user = (QuantumShareUser) session.getAttribute("qsuser");
+	public ResponseEntity<ResponseWrapper> postToInsta(MultipartFile mediaFile, @ModelAttribute MediaPost mediaPost) {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+					HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		String userId = jwtUtilConfig.extractUserId(jwtToken);
+		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
-			structure.setMessage("Session has expired, Please login");
+			structure.setMessage("user doesn't exists, please signup");
 			structure.setStatus("error");
 			structure.setData(null);
 			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
 					HttpStatus.NOT_FOUND);
 		}
-		System.out.println("conteoller");
 		try {
-			System.out.println(mediaPost.getMediaPlatform());
-			if (mediaPost.getMediaPlatform() == null ) {
+			if (mediaPost.getMediaPlatform() == null) {
 				structure.setCode(HttpStatus.BAD_REQUEST.value());
 				structure.setStatus("error");
 				structure.setMessage("select social media platforms");

@@ -41,8 +41,8 @@ public class ConfigurationClass {
 
 	@Bean
 	@Lazy
-	public Map<String, Long> getMap() {
-		return new HashMap<String, Long>();
+	public Map<String, Object> getMap() {
+		return new HashMap<String, Object>();
 	}
 
 	@Bean

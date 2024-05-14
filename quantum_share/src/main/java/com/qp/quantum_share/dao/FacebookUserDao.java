@@ -28,4 +28,8 @@ public class FacebookUserDao {
 		return repository.findById(id).orElse(null);
 	}
 
+	public void deleteFbUser(FaceBookUser faceBookUser) {
+		repository.delete(faceBookUser);
+	}
+
 }

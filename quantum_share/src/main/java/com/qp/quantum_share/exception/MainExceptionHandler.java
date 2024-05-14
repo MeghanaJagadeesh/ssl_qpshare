@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.qp.quantum_share.response.ResponseStructure;
 
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
+
 @RestControllerAdvice
 public class MainExceptionHandler extends RuntimeException {
 
@@ -33,10 +36,30 @@ public class MainExceptionHandler extends RuntimeException {
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.NOT_ACCEPTABLE.value());
 		structure.setStatus("error");
-
+		structure.setPlatform(null);
 		structure.setData(exception.getMessage());
 
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
+	}
+
+	@ExceptionHandler(SignatureException.class)
+	public ResponseEntity<ResponseStructure<String>> handleSessionError(SignatureException exception) {
+		structure.setMessage("Missing or invalid authorization token");
+		structure.setCode(115);
+		structure.setStatus("error");
+		structure.setPlatform(null);
+		structure.setData(exception.getMessage());
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+	}
+
+	@ExceptionHandler(MalformedJwtException.class)
+	public ResponseEntity<ResponseStructure<String>> handleSessionError(MalformedJwtException exception) {
+		structure.setMessage("Missing or invalid authorization token");
+		structure.setCode(115);
+		structure.setStatus("error");
+		structure.setPlatform(null);
+		structure.setData(exception.getMessage());
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
 	}
 
 	@ExceptionHandler(NullPointerException.class)
@@ -45,19 +68,21 @@ public class MainExceptionHandler extends RuntimeException {
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.BAD_REQUEST.value());
 		structure.setStatus("error");
-
 		structure.setData("Bad Request");
-
+		structure.setData(null);
+		structure.setPlatform(null);
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
 	}
 
 	@ExceptionHandler(CommonException.class)
 	public ResponseEntity<ResponseStructure<String>> handleCommonException(CommonException exception) {
 		System.out.println("CommonException  ");
-		structure.setMessage(exception.getMessage());
+		exception.printStackTrace();
+		structure.setMessage(exception.message);
 		structure.setCode(HttpStatus.NOT_ACCEPTABLE.value());
 		structure.setStatus("error");
-
+		structure.setData(exception.getCause());
+		structure.setPlatform(null);
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
 	}
 

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import org.springframework.stereotype.Component;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -28,6 +29,7 @@ public class QuantumShareUser {
 	private String verificationToken;
 	private LocalDate signUpDate;
 	
-	@OneToOne
+	@OneToOne(cascade=CascadeType.ALL)
+//	@OneToOne
 	private SocialAccounts socialAccounts;
 }
