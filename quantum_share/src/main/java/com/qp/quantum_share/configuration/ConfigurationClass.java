@@ -1,17 +1,25 @@
 package com.qp.quantum_share.configuration;
 
+import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Scope;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.qp.quantum_share.dto.FacebookPageDetails;
+import com.qp.quantum_share.dto.PaymentDetails;
 import com.qp.quantum_share.response.ErrorResponse;
 import com.qp.quantum_share.response.ResponseStructure;
 import com.qp.quantum_share.response.ResponseWrapper;
@@ -19,6 +27,7 @@ import com.qp.quantum_share.response.SuccessResponse;
 import com.restfb.DefaultFacebookClient;
 import com.restfb.FacebookClient;
 import com.restfb.Version;
+import org.springframework.core.io.ByteArrayResource;
 
 @Component
 public class ConfigurationClass {
@@ -35,6 +44,13 @@ public class ConfigurationClass {
 
 	@Bean
 	@Lazy
+	public HttpEntity<MultiValueMap<String, Object>> getHttpEntityWithMap(MultiValueMap<String, Object> multiValueMap,
+			HttpHeaders headers) {
+		return new HttpEntity<>(multiValueMap, headers);
+	}
+
+	@Bean
+	@Lazy
 	public HttpEntity<String> getHttpEntity(HttpHeaders headers) {
 		return new HttpEntity<>(headers);
 	}
@@ -46,12 +62,16 @@ public class ConfigurationClass {
 	}
 
 	@Bean
+	public MultiValueMap<String, Object> getMultiValueMap() {
+		return new LinkedMultiValueMap<String, Object>();
+	}
+
+	@Bean
 	public RestTemplate getRestTemplate() {
 		return new RestTemplate();
 	}
 
 	@Bean
-	@Lazy
 	public FacebookPageDetails pageDetails() {
 		return new FacebookPageDetails();
 	}
@@ -85,6 +105,16 @@ public class ConfigurationClass {
 		return new ResponseWrapper(errorResponse);
 	}
 
+	@Bean
+	public List<Object> getList() {
+		return new ArrayList<Object>();
+	}
+
+	@Bean
+	@Lazy
+	public List<PaymentDetails> getPaymentList() {
+		return new ArrayList<PaymentDetails>();
+	}
 //	@Bean
 //	public JsonObject getJsonObject(String json)
 //	{
@@ -96,4 +126,52 @@ public class ConfigurationClass {
 //		return new JavaMailSenderImpl();
 //	}
 
+	@Bean
+	public SuccessResponse getSuccessResponse() {
+		return new SuccessResponse();
+	}
+
+	@Bean
+	public ErrorResponse getErrorResponse() {
+		return new ErrorResponse();
+	}
+
+	@Bean
+	@Lazy
+	public PaymentDetails paymentDetails() {
+		return new PaymentDetails();
+	}
+
+	@Bean
+	public SecureRandom secureRandom() {
+		return new SecureRandom(); 
+	}
+
+	@Bean
+	@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+	public StringBuilder stringBuilder() {
+		return new StringBuilder();
+	}
+	
+	@Bean
+    public ByteArrayResourceFactory byteArrayResourceFactory() {
+        return new ByteArrayResourceFactory();
+    }
+
+    public static class ByteArrayResourceFactory {
+        public ByteArrayResource createByteArrayResource(byte[] byteArray, String filename) {
+            return new ByteArrayResource(byteArray) {
+                @Override
+                public String getFilename() {
+                    return filename;
+                }
+            };
+        }
+    }
+    
+    @Bean
+   	@Lazy
+   	public HttpEntity<Map<String, Object>> getMapHttpEntity(Map<String, Object> body, HttpHeaders headers) {
+   		return new HttpEntity<>(body, headers);
+   	}
 }

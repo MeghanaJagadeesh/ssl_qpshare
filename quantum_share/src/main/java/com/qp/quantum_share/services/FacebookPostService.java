@@ -19,7 +19,6 @@ import com.qp.quantum_share.exception.CommonException;
 import com.qp.quantum_share.exception.FBException;
 import com.qp.quantum_share.response.ErrorResponse;
 import com.qp.quantum_share.response.ResponseStructure;
-import com.qp.quantum_share.response.ResponseWrapper;
 import com.qp.quantum_share.response.SuccessResponse;
 import com.restfb.BinaryAttachment;
 import com.restfb.FacebookClient;
@@ -64,8 +63,10 @@ public class FacebookPostService {
 		}
 	}
 
-	public ResponseEntity<ResponseWrapper> postMediaToPage(MediaPost mediaPost, MultipartFile mediaFile,
+	public ResponseEntity<List<Object>> postMediaToPage(MediaPost mediaPost, MultipartFile mediaFile,
 			FaceBookUser user) {
+		List<Object> mainresponse = config.getList();
+		mainresponse.clear();
 		try {
 			List<FacebookPageDetails> pages = user.getPageDetails();
 			if (pages.isEmpty()) {
@@ -74,10 +75,11 @@ public class FacebookPostService {
 				structure.setPlatform("facebook");
 				structure.setStatus("error");
 				structure.setData(null);
-				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
+				mainresponse.add(structure);
+				return new ResponseEntity<List<Object>>(mainresponse, HttpStatus.NOT_FOUND);
 			}
 			for (FacebookPageDetails page : pages) {
-
+				System.out.println(page);
 				String facebookPageId = page.getFbPageId();
 				String pageAccessToken = page.getFbPageAceessToken();
 
@@ -98,22 +100,23 @@ public class FacebookPostService {
 					}
 					GraphResponse finalResponse = finishVideoUploadSession(facebookPageId, client, uploadSessionId,
 							mediaPost.getCaption());
+					String pageName = page.getPageName();
 					if (finalResponse.isSuccess()) {
-						successResponse.setCode(HttpStatus.OK.value());
-						successResponse.setMessage("Posted On FaceBook");
-						successResponse.setStatus("success");
-						successResponse.setPlatform("facebook");
-						successResponse.setData(finalResponse);
-						return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(successResponse),
-								HttpStatus.OK);
+						SuccessResponse succesresponse = config.getSuccessResponse();
+						succesresponse.setCode(HttpStatus.OK.value());
+						succesresponse.setMessage("Posted On " + pageName + " FaceBook Page");
+						succesresponse.setStatus("success");
+						succesresponse.setPlatform("facebook");
+						succesresponse.setData(finalResponse);
+						mainresponse.add(succesresponse);
 					} else {
-						errorResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-						errorResponse.setMessage("Request Failed");
-						errorResponse.setStatus("error");
-						errorResponse.setPlatform("facebook");
-						errorResponse.setData(finalResponse);
-						return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(errorResponse),
-								HttpStatus.INTERNAL_SERVER_ERROR);
+						ErrorResponse errResponse = config.getErrorResponse();
+						errResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+						errResponse.setMessage("Request Failed to post on " + page.getPageName());
+						errResponse.setStatus("error");
+						errResponse.setPlatform("facebook");
+						errResponse.setData(finalResponse);
+						mainresponse.add(errResponse);
 					}
 
 				} else {
@@ -123,37 +126,33 @@ public class FacebookPostService {
 					System.out.println("Post ID: " + response.getId());
 					System.out.println("response  " + response);
 					if (response.getId() != null) {
-						successResponse.setCode(HttpStatus.OK.value());
-						successResponse.setMessage("Posted On FaceBook");
-						successResponse.setStatus("success");
-						successResponse.setData(response);
-						successResponse.setPlatform("facebook");
-						return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(successResponse),
-								HttpStatus.OK);
+						SuccessResponse succesresponse = config.getSuccessResponse();
+						succesresponse.setCode(HttpStatus.OK.value());
+						succesresponse.setMessage("Posted On " + page.getPageName() + " FaceBook Page");
+						succesresponse.setStatus("success");
+						succesresponse.setData(response);
+						succesresponse.setPlatform("facebook");
+						System.out.println(page.getPageName());
+						mainresponse.add(succesresponse);
 					} else {
-						errorResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-						errorResponse.setMessage("Request Failed");
-						errorResponse.setStatus("error");
-						errorResponse.setData(response);
-						errorResponse.setPlatform("facebook");
-						return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(errorResponse),
-								HttpStatus.INTERNAL_SERVER_ERROR);
+						ErrorResponse errResponse = config.getErrorResponse();
+						errResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+						errResponse.setMessage("Request Failed to post on " + page.getPageName());
+						errResponse.setStatus("error");
+						errResponse.setData(response);
+						errResponse.setPlatform("facebook");
+						mainresponse.add(errResponse);
 					}
 				}
 			}
-			return null;
+			return new ResponseEntity<List<Object>>(mainresponse, HttpStatus.OK);
 
 		} catch (FacebookException e) {
 			throw new FBException(e.getMessage(), "facebook");
 		} catch (IllegalArgumentException e) {
 			throw new CommonException(e.getMessage());
 		} catch (IOException e) {
-			errorResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-			errorResponse.setMessage("IOException occurred");
-			errorResponse.setStatus("error");
-			errorResponse.setData(null); // You may need to handle this differently
-			return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(errorResponse),
-					HttpStatus.INTERNAL_SERVER_ERROR);
+			throw new CommonException(e.getMessage());
 		} catch (NullPointerException e) {
 			throw new NullPointerException(e.getMessage());
 		} catch (InternalServerError error) {
@@ -199,5 +198,4 @@ public class FacebookPostService {
 		}
 	}
 
-	
 }

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -30,15 +29,6 @@ import com.qp.quantum_share.response.ResponseStructure;
 
 @Service
 public class FacebookAccessTokenService {
-
-	@Value("${spring.social.facebook.appId}")
-	private String appId;
-
-	@Value("${spring.social.facebook.appSecret}")
-	private String appSecret;
-
-	@Value("${spring.social.redirect_uri}")
-	private String redirect_uri;
 
 	@Autowired
 	ObjectMapper objectMapper;
@@ -74,9 +64,6 @@ public class FacebookAccessTokenService {
 	QuantumShareUserDao userDao;
 
 	public ResponseEntity<ResponseStructure<String>> verifyToken(String access_Token, QuantumShareUser user) {
-//		FacebookClient client = new DefaultFacebookClient(Version.LATEST);
-//		FacebookClient.AccessToken accessToken = client.obtainUserAccessToken(appId, appSecret, redirect_uri,
-//				deviceCode);
 		String responseUser = fetchUser(access_Token);
 		String responsePage = fetchUserPages(access_Token);
 		System.out.println(responseUser);
@@ -86,6 +73,8 @@ public class FacebookAccessTokenService {
 
 	public ResponseEntity<ResponseStructure<String>> saveUser(String fbUser, String userPage, String acceToken,
 			QuantumShareUser user) {
+		Map<String, Object> pageProfile = configuration.getMap();
+		pageProfile.clear();
 		try {
 			if (fbUser != null) {
 				JsonNode fbuser = objectMapper.readTree(fbUser);
@@ -123,12 +112,6 @@ public class FacebookAccessTokenService {
 				}else if(accounts.getFacebookUser()==null) {
 					accounts.setFacebookUser(faceBookUser);
 				}
-//				socialAccounts.setFacebookUser(faceBookUser);			
-//				if (exfbUser != null && !exfbUser.getPageDetails().isEmpty()) {
-//					// Clear existing Facebook pages before adding new ones (Method 2)
-//					exfbUser.setPageDetails(new ArrayList<>());
-//					facebookDao.saveUser(exfbUser); // Save the updated FaceBookUser with empty list
-//				}
 				List<FacebookPageDetails> pageList = new ArrayList<>();
 				if (userPage != null) {
 					JsonNode fbuserPage = objectMapper.readTree(userPage);
@@ -148,8 +131,11 @@ public class FacebookAccessTokenService {
 											? page.get("instagram_business_account").get("id").asText()
 											: null);
 //							pageDao.savePage(pages);
-
+							System.out.println(page);
+							System.out.println(page.get("picture").get("data").get("url"));
+							pageProfile.put(page.get("name") != null ? page.get("name").asText() : null ,page.get("picture").get("data").get("url"));
 							pageList.add(pages);
+							
 						}
 						faceBookUser.setPageDetails(pageList);
 						faceBookUser.setNoOfFbPages(numberOfPages);
@@ -163,13 +149,12 @@ public class FacebookAccessTokenService {
 				structure.setMessage("Facebook Connected Successfully");
 				structure.setStatus("success");
 				structure.setPlatform("facebook");
-				System.out.println("*******************************");
 				Map<String, Object> data = configuration.getMap();
 				FaceBookUser datauser = user.getSocialAccounts().getFacebookUser();
 				data.put("facebookUrl", datauser.getPictureUrl());
 				data.put("facebookUsername", datauser.getFbuserUsername());
 				data.put("facebookNumberofpages", datauser.getNoOfFbPages());
-				data.put("pages", pageList);
+				data.put("pages_url", pageProfile);
 				structure.setData(data);
 				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.CREATED);
 			} else {
@@ -200,7 +185,7 @@ public class FacebookAccessTokenService {
 	}
 
 	public String fetchUserPages(String userAccessToken) {
-		String apiUrl = "https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token="
+		String apiUrl = "https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,instagram_business_account,picture&access_token="
 				+ userAccessToken;
 		HttpEntity<String> requestEntity = configuration.getHttpEntity(configuration.httpHeaders());
 		ResponseEntity<String> response = configuration.getRestTemplate().exchange(apiUrl, HttpMethod.GET,
@@ -212,10 +197,4 @@ public class FacebookAccessTokenService {
 			return null;
 	}
 
-	public String getAuthorizationUrl() {
-		String scope = "pages_manage_posts,pages_show_list,publish_video";
-		String loginUrl = "https://www.facebook.com/v19.0/dialog/oauth?client_id=" + appId + "&redirect_uri="
-				+ redirect_uri + "&scope=" + scope + "&response_type=code";
-		return loginUrl;
-	}
 }

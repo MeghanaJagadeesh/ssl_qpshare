@@ -29,5 +29,9 @@ public class InstagramUserDao {
 	public InstagramUser findById(String instaId) {
 		return instagramRepository.findById(instaId).orElse(null);
 	}
+	
+	public void deleteUser(InstagramUser user) {
+		instagramRepository.delete(user);
+	}
 
 }

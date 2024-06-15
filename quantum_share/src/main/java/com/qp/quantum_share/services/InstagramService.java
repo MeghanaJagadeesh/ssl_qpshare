@@ -251,6 +251,7 @@ public class InstagramService {
 
 	public ResponseEntity<ResponseStructure<String>> verifyToken(String access_token, QuantumShareUser user) {
 		String instaId = fetchID(access_token);
+		System.out.println("instaid  " + instaId);
 		JsonNode instaUser = null;
 		ResponseEntity<String> profile = null;
 		if (instaId != null) {
@@ -305,7 +306,6 @@ public class InstagramService {
 				socialAccounts.setInstagramUser(instagramUser);
 				user.setSocialAccounts(socialAccounts);
 			} else {
-				System.out.println(")))))))))else");
 				if (accounts.getInstagramUser() == null) {
 					accounts.setInstagramUser(instagramUser);
 					user.setSocialAccounts(accounts);
@@ -344,11 +344,8 @@ public class InstagramService {
 	}
 
 	private ResponseEntity<String> fetchProfile(String instaId, String username, String access_token) {
-		System.out.println(username);
-		System.out.println(username.replace("\"", ""));
 		try {
-			String fetchAPI = "https://graph.facebook.com/v19.0/" + instaId + "?fields=business_discovery.username("
-					+ username.replace("\"", "") + "),profile_picture_url,ig_id,media_count,username";
+			String fetchAPI = "https://graph.facebook.com/v19.0/" + instaId + "?fields=profile_picture_url,ig_id,media_count,username";
 			System.out.println(fetchAPI);
 			headers.setBearerAuth(access_token);
 			HttpEntity<String> requestEntity = configuration.getHttpEntity(headers);
@@ -396,9 +393,15 @@ public class InstagramService {
 			JsonNode responseJson = objectMapper.readTree(response.getBody());
 			JsonNode data = responseJson.get("data");
 			if (data != null && data.isArray() && data.size() > 0) {
-				JsonNode instagramIdNode = data.get(0).path("instagram_business_account").path("id");
-				if (instagramIdNode.isTextual()) {
-					return instagramIdNode.asText();
+//				JsonNode instagramIdNode = data.get("instagram_business_account").get("id");
+//				System.out.println("instagramIdNode "+instagramIdNode.asText());
+				JsonNode instagramIdNode = null;
+				for (JsonNode itemNode : data) {
+					instagramIdNode = extractBusinessAccountIdFromItem(itemNode);
+					if (instagramIdNode != null && instagramIdNode.isTextual()) {
+						System.out.println("xcc");
+						return instagramIdNode.asText();
+					}
 				}
 			}
 		} catch (JsonMappingException e) {
@@ -408,7 +411,21 @@ public class InstagramService {
 		} catch (BadRequest e) {
 			throw new BadRequestException(e.getMessage());
 		}
-		return access_token;
+		return null;
 
+	}
+
+	private JsonNode extractBusinessAccountIdFromItem(JsonNode itemNode) {
+		JsonNode businessAccountNode = itemNode.get("instagram_business_account");
+		if (businessAccountNode != null && businessAccountNode.isObject()) {
+			JsonNode businessAccountIdNode = businessAccountNode.get("id");
+			if (businessAccountIdNode != null && businessAccountIdNode.isTextual()) {
+				return businessAccountIdNode;
+			} else {
+				return null;
+			}
+		} else {
+			return null;
+		}
 	}
 }

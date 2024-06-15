@@ -105,26 +105,27 @@ public class MainExceptionHandler extends RuntimeException {
 //	}
 
 	@ExceptionHandler(IllegalArgumentException.class)
-	public ResponseEntity<ResponseStructure<String>> handleJsonMapping(IllegalArgumentException exception) {
+	public ResponseEntity<ResponseStructure<String>> handleIllegalArgumentExce(IllegalArgumentException exception) {
+
 		System.out.println("IllegalArgumentException  ");
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.BAD_REQUEST.value());
 		structure.setStatus("error");
-
-		try {
-			String m = exception.getMessage();
-			String messageValue = extractMessageValue(m);
-			structure.setData(messageValue);
-		} catch (Exception e) {
-			structure.setData("Error processing error message: " + e.getMessage());
-
-		}
+		structure.setData(exception);
+//		try {
+//			String m = exception.getMessage();
+//			String messageValue = extractMessageValue(m);
+//			structure.setData(messageValue);
+//		} catch (Exception e) {
+//			structure.setData("Error processing error message: " + e.getMessage());
+//
+//		}
 
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
 	}
 
 	@ExceptionHandler(IOException.class)
-	public ResponseEntity<ResponseStructure<String>> handleJsonMapping(IOException exception) {
+	public ResponseEntity<ResponseStructure<String>> handleIOException(IOException exception) {
 		System.out.println("IOException  ");
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.NOT_FOUND.value());

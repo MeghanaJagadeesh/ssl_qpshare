@@ -46,10 +46,11 @@ public class GenerateId {
 		if (lastUserId == null || lastUserId.isEmpty()) {
 			userId = "QSU2401";
 		} else {
-			int lastNumber = Integer.parseInt(lastUserId.substring(7));
+			int lastNumber = Integer.parseInt(lastUserId.substring(6));
 			int newNumber = lastNumber + 1;
-			userId = "QSU2024" + String.format("%02d", newNumber);
+			userId = "QSU24" + String.format("%02d", newNumber);
 		}
+		System.out.println(userId);
 		return userId;
 	}
 

@@ -15,12 +15,11 @@ import com.qp.quantum_share.configuration.ConfigurationClass;
 import com.qp.quantum_share.exception.CommonException;
 
 @Component
-public class UploadFileToServer {
-
+public class UploadProfileToServer {
 	@Autowired
 	ConfigurationClass configuration;
 
-	private String BUCKET_NAME = "quantumshare-user-posts";
+	private String BUCKET_NAME = "quantumshare-user-profile";
 	private String AWS_REGION = "ap-south-1";
 
 	public String uploadFile(MultipartFile file) {
@@ -41,5 +40,4 @@ public class UploadFileToServer {
 			throw new CommonException(e.getMessage());
 		}
 	}
-
 }
