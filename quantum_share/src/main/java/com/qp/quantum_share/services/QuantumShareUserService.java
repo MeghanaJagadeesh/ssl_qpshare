@@ -1,11 +1,13 @@
 package com.qp.quantum_share.services;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,9 @@ import com.qp.quantum_share.response.ResponseStructure;
 
 @Service
 public class QuantumShareUserService {
+
+	@Value("${quantumshare.freetrail}")
+	private int freetrail;
 
 	@Autowired
 	ResponseStructure<String> structure;
@@ -45,7 +50,7 @@ public class QuantumShareUserService {
 
 	@Autowired
 	ConfigurationClass configure;
-	
+
 	@Autowired
 	SubscriptionDetails subscriptionDetails;
 
@@ -79,7 +84,6 @@ public class QuantumShareUserService {
 					return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
 
 				} else {
-					System.out.println("not verified");
 					String verificationToken = UUID.randomUUID().toString();
 					user.setVerificationToken(verificationToken);
 					userDao.save(user);
@@ -110,9 +114,9 @@ public class QuantumShareUserService {
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
 		} else {
 
-			String userId = generateId.generateuserId();
-			System.out.println("userId : "+userId);
-			user.setUserId(userId);
+//			String userId = generateId.generateuserId();
+//			System.out.println("userId : " + userId);
+//			user.setUserId(userId);
 			user.setPassword(SecurePassword.encrypt(user.getPassword(), "123"));
 			userDao.saveUser(user);
 
@@ -132,27 +136,32 @@ public class QuantumShareUserService {
 
 	public ResponseEntity<ResponseStructure<String>> verifyEmail(String token) {
 		QuantumShareUser user = userDao.findByVerificationToken(token);
-		System.out.println(user);
 		if (user != null) {
 			user.setVerified(true);
 			user.setSignUpDate(LocalDate.now());
+			user.setTrial(true);
+			user.setCredit(3);
+			Map<String, Object> map = configure.getMap();
+			map.put("remainingdays", freetrail);
+			map.put("user", user);
 			userDao.saveUser(user);
 
 			structure.setCode(HttpStatus.CREATED.value());
 			structure.setStatus("success");
 			structure.setMessage("successfully signedup");
-			structure.setData(user);
-			return new ResponseEntity<ResponseStructure<String>>(structure,HttpStatus.CREATED);
+			structure.setData(map);
+			
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.CREATED);
 		} else {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
 			structure.setMessage("Email verification failed... ");
 			structure.setStatus("error");
 			structure.setData(null);
-			return new ResponseEntity<ResponseStructure<String>>(structure,HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.BAD_REQUEST);
 		}
 	}
 
-	public ResponseEntity<ResponseStructure<String>> accountOverView(String userId) {
+	public ResponseEntity<ResponseStructure<String>> accountOverView(int userId) {
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -162,6 +171,7 @@ public class QuantumShareUserService {
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
 		}
 		Map<String, Object> map = configure.getMap();
+		map.clear();
 		map.put("name", user.getFirstName() + " " + user.getLastName());
 		map.put("company_name", user.getCompany());
 		map.put("email", user.getEmail());
@@ -176,7 +186,7 @@ public class QuantumShareUserService {
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
 	}
 
-	public ResponseEntity<ResponseStructure<String>> accountOverView(String userId, MultipartFile file) {
+	public ResponseEntity<ResponseStructure<String>> accountOverView(int userId, MultipartFile file) {
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -190,6 +200,7 @@ public class QuantumShareUserService {
 		userDao.save(user);
 		structure.setCode(HttpStatus.OK.value());
 		Map<String, Object> map = configure.getMap();
+		map.clear();
 		map.put("name", user.getFirstName() + " " + user.getLastName());
 		map.put("company_name", user.getCompany());
 		map.put("email", user.getEmail());
@@ -200,5 +211,94 @@ public class QuantumShareUserService {
 		structure.setPlatform(null);
 		structure.setStatus("success");
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+	}
+
+	public ResponseEntity<ResponseStructure<String>> calculateRemainingPackageDays(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please signup");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		LocalDate localDate = LocalDate.now();
+		int remainingDays = 0;
+		if (user.isTrial()) {
+			LocalDate trailDate = user.getSignUpDate();
+			if ((freetrail - ChronoUnit.DAYS.between(trailDate, localDate)) > 0) {
+				remainingDays = (int) (freetrail - ChronoUnit.DAYS.between(trailDate, localDate));
+				user.setCredit(3);
+				userDao.save(user);
+				Map<String, Object> map = configure.getMap();
+				map.clear();
+				map.put("remainingdays", remainingDays);
+				map.put("credits", user.getCredit());
+
+				structure.setCode(HttpStatus.OK.value());
+				structure.setMessage("remaining access in days : " + remainingDays);
+				structure.setData(map);
+				structure.setStatus("success");
+				structure.setPlatform(null);
+				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+			} else {
+				remainingDays = 0;
+				user.setTrial(false);
+				user.setCredit(0);
+				userDao.saveUser(user);
+				Map<String, Object> map = configure.getMap();
+				map.clear();
+				map.put("remainingdays", remainingDays);
+				map.put("credits", user.getCredit());
+
+				structure.setCode(HttpStatus.NOT_EXTENDED.value());
+				structure.setMessage("remaining access in days : " + remainingDays);
+				structure.setData(map);
+				structure.setStatus("success");
+				structure.setPlatform(null);
+				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+
+			}
+		} else if (user.getSubscriptionDetails() != null && user.getSubscriptionDetails().isSubscribed()) {
+			LocalDate subscriptionDate = user.getSubscriptionDetails().getSubscriptionDate();
+			int subscriptiondays = user.getSubscriptionDetails().getSubscriptiondays();
+			if ((subscriptiondays - ChronoUnit.DAYS.between(subscriptionDate, localDate)) > 0) {
+				remainingDays = (int) (subscriptiondays - ChronoUnit.DAYS.between(subscriptionDate, localDate));
+				Map<String, Object> map = configure.getMap();
+				map.clear();
+				map.put("remainingdays", remainingDays);
+
+				structure.setCode(HttpStatus.OK.value());
+				structure.setMessage("remaining access in days : " + remainingDays);
+				structure.setData(map);
+				structure.setStatus("success");
+				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.FOUND);
+
+			} else {
+				remainingDays = 0;
+				SubscriptionDetails subcribedUser = user.getSubscriptionDetails();
+				subcribedUser.setSubscribed(false);
+				subcribedUser.setSubscriptiondays(0);
+				user.setSubscriptionDetails(subcribedUser);
+				userDao.save(user);
+				Map<String, Object> map = configure.getMap();
+				map.clear();
+				map.put("remainingdays", remainingDays);
+
+				structure.setCode(HttpStatus.NOT_EXTENDED.value());
+				structure.setMessage("remaining access in days : " + remainingDays);
+				structure.setData(map);
+				structure.setStatus("error");
+				structure.setPlatform(null);
+				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_EXTENDED);
+
+			}
+		} else {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("Package has been expired!! Please Subscribe Your package.");
+			structure.setData(remainingDays);
+			structure.setStatus("error");
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
 	}
 }

@@ -4,6 +4,8 @@ import org.springframework.stereotype.Component;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Data;
 
@@ -13,7 +15,8 @@ import lombok.Data;
 public class InstagramUser {
 
 	@Id
-	private String instaId;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int instaId;
 	private String instaUserId;
 	private String instaUsername;
 	private int follwersCount;

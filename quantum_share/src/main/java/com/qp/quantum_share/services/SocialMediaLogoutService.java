@@ -58,12 +58,10 @@ public class SocialMediaLogoutService {
 
 		FaceBookUser deleteUser = accounts.getFacebookUser();
 		List<FacebookPageDetails> pages = accounts.getFacebookUser().getPageDetails();
-		System.out.println("1 " + pages);
 		accounts.getFacebookUser().setPageDetails(null);
 		accounts.setFacebookUser(null);
 		user.setSocialAccounts(accounts);
 		userDao.save(user);
-		System.out.println("2 " + pages);
 		facebookUserDao.deleteFbUser(deleteUser);
 		pageDao.deletePage(pages);
 

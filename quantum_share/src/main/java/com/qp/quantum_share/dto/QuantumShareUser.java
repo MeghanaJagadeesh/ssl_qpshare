@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import lombok.Data;
@@ -13,8 +15,8 @@ import lombok.Data;
 public class QuantumShareUser {
 
 	@Id
-//	@Column(unique = true)
-	private String userId;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int userId;
 	private String firstName;
 	private String lastName;
 	private String email;
@@ -25,6 +27,8 @@ public class QuantumShareUser {
 	private String verificationToken;
 	private LocalDate signUpDate;
 	private String profilePic;
+	private boolean trial;
+	private int credit;
 
 	@OneToOne(cascade = CascadeType.ALL)
 	private SocialAccounts socialAccounts;

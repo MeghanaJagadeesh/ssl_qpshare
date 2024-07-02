@@ -1,6 +1,8 @@
 package com.qp.quantum_share.services;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.qp.quantum_share.configuration.ConfigurationClass;
 import com.qp.quantum_share.dao.FacebookUserDao;
+import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dto.FaceBookUser;
 import com.qp.quantum_share.dto.FacebookPageDetails;
 import com.qp.quantum_share.dto.MediaPost;
+import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.exception.CommonException;
 import com.qp.quantum_share.exception.FBException;
 import com.qp.quantum_share.response.ErrorResponse;
@@ -47,24 +51,25 @@ public class FacebookPostService {
 	@Autowired
 	ErrorResponse errorResponse;
 
+	@Autowired
+	QuantumShareUserDao userDao;
+
 	public boolean postToPage(String pageId, String pageAccessToken, String message) {
 
 		FacebookClient client = config.getFacebookClient(pageAccessToken);
 		try {
 			FacebookType response = client.publish(pageId + "/feed", FacebookType.class,
 					Parameter.with("message", message));
-			System.out.println("Post ID: " + response.getId());
 			return true;
 		} catch (FacebookException e) {
-			System.out.println("Error posting to page: " + e.getMessage());
 			return false;
 		} catch (Exception e) {
 			throw new CommonException(e.getMessage());
 		}
 	}
 
-	public ResponseEntity<List<Object>> postMediaToPage(MediaPost mediaPost, MultipartFile mediaFile,
-			FaceBookUser user) {
+	public ResponseEntity<List<Object>> postMediaToPage(MediaPost mediaPost, MultipartFile mediaFile, FaceBookUser user,
+			QuantumShareUser qsuser) {
 		List<Object> mainresponse = config.getList();
 		mainresponse.clear();
 		try {
@@ -79,20 +84,17 @@ public class FacebookPostService {
 				return new ResponseEntity<List<Object>>(mainresponse, HttpStatus.NOT_FOUND);
 			}
 			for (FacebookPageDetails page : pages) {
-				System.out.println(page);
 				String facebookPageId = page.getFbPageId();
 				String pageAccessToken = page.getFbPageAceessToken();
 
 				FacebookClient client = config.getFacebookClient(pageAccessToken);
 
 				FacebookType response;
-				System.out.println("inside try ");
 				if (isVideo(mediaFile)) {
 					byte[] videoByte = mediaFile.getBytes();
 					int videosize = videoByte.length;
 					String uploadSessionId = createVideoUploadSession(client, facebookPageId, videosize);
 					uploadSessionId = uploadSessionId.replaceAll("\"", "");
-					System.out.println("uploadSessionId : " + uploadSessionId);
 					long startOffset = 0;
 
 					while (startOffset < videosize) {
@@ -102,12 +104,15 @@ public class FacebookPostService {
 							mediaPost.getCaption());
 					String pageName = page.getPageName();
 					if (finalResponse.isSuccess()) {
+						qsuser.setCredit(qsuser.getCredit() - 1);
+						userDao.save(qsuser);
 						SuccessResponse succesresponse = config.getSuccessResponse();
 						succesresponse.setCode(HttpStatus.OK.value());
 						succesresponse.setMessage("Posted On " + pageName + " FaceBook Page");
 						succesresponse.setStatus("success");
 						succesresponse.setPlatform("facebook");
 						succesresponse.setData(finalResponse);
+						succesresponse.setRemainingCredits(qsuser.getCredit());
 						mainresponse.add(succesresponse);
 					} else {
 						ErrorResponse errResponse = config.getErrorResponse();
@@ -123,16 +128,18 @@ public class FacebookPostService {
 					response = client.publish(facebookPageId + "/photos", FacebookType.class,
 							BinaryAttachment.with("source", mediaFile.getBytes()),
 							Parameter.with("message", mediaPost.getCaption()));
-					System.out.println("Post ID: " + response.getId());
-					System.out.println("response  " + response);
 					if (response.getId() != null) {
 						SuccessResponse succesresponse = config.getSuccessResponse();
+						qsuser.setCredit(qsuser.getCredit() - 1);
+						userDao.save(qsuser);
+						System.out.println("facebook : " + qsuser +" "+ LocalTime.now());
 						succesresponse.setCode(HttpStatus.OK.value());
 						succesresponse.setMessage("Posted On " + page.getPageName() + " FaceBook Page");
 						succesresponse.setStatus("success");
 						succesresponse.setData(response);
 						succesresponse.setPlatform("facebook");
-						System.out.println(page.getPageName());
+						System.out.println("facebook " + qsuser.getCredit());
+						succesresponse.setRemainingCredits(qsuser.getCredit());
 						mainresponse.add(succesresponse);
 					} else {
 						ErrorResponse errResponse = config.getErrorResponse();
@@ -184,7 +191,6 @@ public class FacebookPostService {
 		GraphResponse response = client.publish(facebookPageId + "/videos", GraphResponse.class,
 				Parameter.with("upload_phase", "finish"), Parameter.with("upload_session_id", uploadSessionId),
 				Parameter.with("description", message));
-		System.out.println("video response " + response);
 		return response;
 	}
 

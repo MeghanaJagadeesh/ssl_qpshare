@@ -12,6 +12,7 @@ import com.qp.quantum_share.response.ResponseStructure;
 
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
+import twitter4j.TwitterException;
 
 @RestControllerAdvice
 public class MainExceptionHandler extends RuntimeException {
@@ -76,8 +77,6 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(CommonException.class)
 	public ResponseEntity<ResponseStructure<String>> handleCommonException(CommonException exception) {
-		System.out.println("CommonException  ");
-		exception.printStackTrace();
 		structure.setMessage(exception.message);
 		structure.setCode(HttpStatus.NOT_ACCEPTABLE.value());
 		structure.setStatus("error");
@@ -107,7 +106,6 @@ public class MainExceptionHandler extends RuntimeException {
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<ResponseStructure<String>> handleIllegalArgumentExce(IllegalArgumentException exception) {
 
-		System.out.println("IllegalArgumentException  ");
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.BAD_REQUEST.value());
 		structure.setStatus("error");
@@ -126,7 +124,6 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(IOException.class)
 	public ResponseEntity<ResponseStructure<String>> handleIOException(IOException exception) {
-		System.out.println("IOException  ");
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.NOT_FOUND.value());
 		structure.setStatus("error");
@@ -144,7 +141,6 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(IllegalStateException.class)
 	public ResponseEntity<ResponseStructure<String>> handleIllegalStateException(IllegalStateException exception) {
-		System.out.println("IllegalStateException  ");
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.NOT_FOUND.value());
 		structure.setStatus("error");
@@ -162,7 +158,6 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(FBException.class)
 	public ResponseEntity<ResponseStructure<String>> handleFBException(FBException exception) {
-		System.out.println(exception);
 		String message = null;
 		if (exception.getMessage().contains(":")) {
 			message = exception.getMessage().split(":")[1];
@@ -177,7 +172,6 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ResponseStructure<String>> handleException(Exception exception) {
-		System.out.println(exception);
 		String message = null;
 		if (exception.toString().contains(":")) {
 			message = exception.toString().split(":")[1];
@@ -186,6 +180,15 @@ public class MainExceptionHandler extends RuntimeException {
 		structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 		structure.setStatus("error");
 		structure.setData(exception.getLocalizedMessage());
+		return new ResponseEntity<>(structure, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	@ExceptionHandler(TwitterException.class)
+	public ResponseEntity<ResponseStructure<String>> handleTwitterException(TwitterException exception) {
+		structure.setMessage(exception.getMessage());
+		structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+		structure.setStatus("error");
+		structure.setData(exception.getCause());
 		return new ResponseEntity<>(structure, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 

@@ -22,8 +22,14 @@ public class TwitterUser {
 	private String userName;
 	private String picture_url;
 	private int follower_count;
+	private long accessTokenExpirationTime;
+	private long tokenGenerationTime;
 
 	@Column(length = 2000)
 	private String access_token;
 
+	@Column(length = 2000)
+	private String refresh_token;
+	
+	
 }

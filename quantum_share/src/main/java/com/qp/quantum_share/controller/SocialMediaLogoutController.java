@@ -46,7 +46,7 @@ public class SocialMediaLogoutController {
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
-		String userId = jwtUtilConfig.extractUserId(jwtToken);
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -70,7 +70,7 @@ public class SocialMediaLogoutController {
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
-		String userId = jwtUtilConfig.extractUserId(jwtToken);
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -95,7 +95,7 @@ public class SocialMediaLogoutController {
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
 		}
 		String jwtToken = token.substring(7);
-		String userId = jwtUtilConfig.extractUserId(jwtToken);
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
