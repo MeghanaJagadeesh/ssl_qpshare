@@ -104,8 +104,34 @@ public class QuantumShareUserController {
 		return quantumShareUserService.accountOverView(userId, file);
 	}
 
-	@GetMapping("/access/remainingdays")
-	public ResponseEntity<ResponseStructure<String>> userRemainingDays() {
+//	@GetMapping("/access/remainingdays")
+//	public ResponseEntity<ResponseStructure<String>> userRemainingDays() {
+//		String token = request.getHeader("Authorization");
+//		if (token == null || !token.startsWith("Bearer ")) {
+//			structure.setCode(115);
+//			structure.setMessage("Missing or invalid authorization token");
+//			structure.setStatus("error");
+//			structure.setPlatform(null);
+//			structure.setData(null);
+//			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+//		}
+//		String jwtToken = token.substring(7); // remove "Bearer " prefix
+//		int userId = jwtUtilConfig.extractUserId(jwtToken);
+//		return quantumShareUserService.calculateRemainingPackageDays(userId);
+//	}
+
+	@GetMapping("/test/session")
+	public Map<String, Object> test() {
+		Map<String, Object> map = new HashMap<String, Object>();
+		System.out.println("coming");
+		map.put("name", "meghana");
+		map.put("company", "QP");
+		map.put("id", "QSU24001");
+		return map;
+	}
+
+	@GetMapping("/connected/socialmedia/facebook")
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedFB() {
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
 			structure.setCode(115);
@@ -117,18 +143,57 @@ public class QuantumShareUserController {
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
-		return quantumShareUserService.calculateRemainingPackageDays(userId);
+		return quantumShareUserService.fetchConnectedFb(userId);
+
+	}
+
+	@GetMapping("/connected/socialmedia/instagram")
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedinsta() {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		return quantumShareUserService.fetchConnectedInsta1(userId);
+
+	}
+
+	@GetMapping("/connected/socialmedia/telegram")
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedTelegram() {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		return quantumShareUserService.fetchConnectedTelegram(userId);
 	}
 	
-
-	@GetMapping("/test/session")
-	public Map<String, Object> test() {
-		Map<String,Object> map=new HashMap<String, Object>();
-		System.out.println("coming");
-		map.put("name", "meghana");
-		map.put("company", "QP");
-		map.put("id", "QSU24001");
-		return map;
+	@GetMapping("/info")
+	public ResponseEntity<ResponseStructure<String>> fetchUserInfo(){
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		return quantumShareUserService.fetchUserInfo(userId);	
 	}
 
 }

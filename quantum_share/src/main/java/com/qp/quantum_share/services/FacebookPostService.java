@@ -1,7 +1,6 @@
 package com.qp.quantum_share.services;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -104,6 +103,7 @@ public class FacebookPostService {
 							mediaPost.getCaption());
 					String pageName = page.getPageName();
 					if (finalResponse.isSuccess()) {
+						System.out.println(finalResponse);
 						qsuser.setCredit(qsuser.getCredit() - 1);
 						userDao.save(qsuser);
 						SuccessResponse succesresponse = config.getSuccessResponse();
@@ -129,6 +129,7 @@ public class FacebookPostService {
 							BinaryAttachment.with("source", mediaFile.getBytes()),
 							Parameter.with("message", mediaPost.getCaption()));
 					if (response.getId() != null) {
+						System.out.println(response);
 						SuccessResponse succesresponse = config.getSuccessResponse();
 						qsuser.setCredit(qsuser.getCredit() - 1);
 						userDao.save(qsuser);

@@ -61,6 +61,7 @@ public class ConfigurationClass {
 		return new HashMap<String, Object>();
 	}
 
+
 	@Bean
 	public MultiValueMap<String, Object> getMultiValueMap() {
 		return new LinkedMultiValueMap<String, Object>();
@@ -115,16 +116,6 @@ public class ConfigurationClass {
 	public List<PaymentDetails> getPaymentList() {
 		return new ArrayList<PaymentDetails>();
 	}
-//	@Bean
-//	public JsonObject getJsonObject(String json)
-//	{
-//		return new JsonObject(json);
-//	}
-
-//	@Bean
-//	public JavaMailSender mailSender() {
-//		return new JavaMailSenderImpl();
-//	}
 
 	@Bean
 	public SuccessResponse getSuccessResponse() {
@@ -144,7 +135,7 @@ public class ConfigurationClass {
 
 	@Bean
 	public SecureRandom secureRandom() {
-		return new SecureRandom(); 
+		return new SecureRandom();
 	}
 
 	@Bean
@@ -152,26 +143,26 @@ public class ConfigurationClass {
 	public StringBuilder stringBuilder() {
 		return new StringBuilder();
 	}
-	
-	@Bean
-    public ByteArrayResourceFactory byteArrayResourceFactory() {
-        return new ByteArrayResourceFactory();
-    }
 
-    public static class ByteArrayResourceFactory {
-        public ByteArrayResource createByteArrayResource(byte[] byteArray, String filename) {
-            return new ByteArrayResource(byteArray) {
-                @Override
-                public String getFilename() {
-                    return filename;
-                }
-            };
-        }
-    }
-    
-    @Bean
-   	@Lazy
-   	public HttpEntity<Map<String, Object>> getMapHttpEntity(Map<String, Object> body, HttpHeaders headers) {
-   		return new HttpEntity<>(body, headers);
-   	}
+	@Bean
+	public ByteArrayResourceFactory byteArrayResourceFactory() {
+		return new ByteArrayResourceFactory();
+	}
+
+	public static class ByteArrayResourceFactory {
+		public ByteArrayResource createByteArrayResource(byte[] byteArray, String filename) {
+			return new ByteArrayResource(byteArray) {
+				@Override
+				public String getFilename() {
+					return filename;
+				}
+			};
+		}
+	}
+
+	@Bean
+	@Lazy
+	public HttpEntity<Map<String, Object>> getMapHttpEntity(Map<String, Object> body, HttpHeaders headers) {
+		return new HttpEntity<>(body, headers);
+	}
 }

@@ -15,8 +15,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.qp.quantum_share.configuration.ConfigurationClass;
 import com.qp.quantum_share.dao.QuantumShareUserDao;
+import com.qp.quantum_share.dto.FaceBookUser;
+import com.qp.quantum_share.dto.FacebookPageDetails;
+import com.qp.quantum_share.dto.InstagramUser;
 import com.qp.quantum_share.dto.QuantumShareUser;
+import com.qp.quantum_share.dto.SocialAccounts;
 import com.qp.quantum_share.dto.SubscriptionDetails;
+import com.qp.quantum_share.dto.TelegramUser;
 import com.qp.quantum_share.helper.GenerateId;
 import com.qp.quantum_share.helper.JwtToken;
 import com.qp.quantum_share.helper.SecurePassword;
@@ -38,9 +43,6 @@ public class QuantumShareUserService {
 
 	@Autowired
 	GenerateId generateId;
-
-//	@Autowired
-//	QuantumShareUser user;
 
 	@Autowired
 	SendMail sendMail;
@@ -150,7 +152,7 @@ public class QuantumShareUserService {
 			structure.setStatus("success");
 			structure.setMessage("successfully signedup");
 			structure.setData(map);
-			
+
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.CREATED);
 		} else {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -213,67 +215,27 @@ public class QuantumShareUserService {
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
 	}
 
-	public ResponseEntity<ResponseStructure<String>> calculateRemainingPackageDays(int userId) {
-		QuantumShareUser user = userDao.fetchUser(userId);
-		if (user == null) {
-			structure.setCode(HttpStatus.NOT_FOUND.value());
-			structure.setMessage("user doesn't exists, please signup");
-			structure.setStatus("error");
-			structure.setData(null);
-			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
-		}
+	public int calculateRemainingPackageDays(QuantumShareUser user) {
 		LocalDate localDate = LocalDate.now();
 		int remainingDays = 0;
 		if (user.isTrial()) {
 			LocalDate trailDate = user.getSignUpDate();
 			if ((freetrail - ChronoUnit.DAYS.between(trailDate, localDate)) > 0) {
 				remainingDays = (int) (freetrail - ChronoUnit.DAYS.between(trailDate, localDate));
-				user.setCredit(3);
-				userDao.save(user);
-				Map<String, Object> map = configure.getMap();
-				map.clear();
-				map.put("remainingdays", remainingDays);
-				map.put("credits", user.getCredit());
-
-				structure.setCode(HttpStatus.OK.value());
-				structure.setMessage("remaining access in days : " + remainingDays);
-				structure.setData(map);
-				structure.setStatus("success");
-				structure.setPlatform(null);
-				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+				return remainingDays;
 			} else {
 				remainingDays = 0;
 				user.setTrial(false);
 				user.setCredit(0);
 				userDao.saveUser(user);
-				Map<String, Object> map = configure.getMap();
-				map.clear();
-				map.put("remainingdays", remainingDays);
-				map.put("credits", user.getCredit());
-
-				structure.setCode(HttpStatus.NOT_EXTENDED.value());
-				structure.setMessage("remaining access in days : " + remainingDays);
-				structure.setData(map);
-				structure.setStatus("success");
-				structure.setPlatform(null);
-				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
-
+				return remainingDays;
 			}
 		} else if (user.getSubscriptionDetails() != null && user.getSubscriptionDetails().isSubscribed()) {
 			LocalDate subscriptionDate = user.getSubscriptionDetails().getSubscriptionDate();
 			int subscriptiondays = user.getSubscriptionDetails().getSubscriptiondays();
 			if ((subscriptiondays - ChronoUnit.DAYS.between(subscriptionDate, localDate)) > 0) {
 				remainingDays = (int) (subscriptiondays - ChronoUnit.DAYS.between(subscriptionDate, localDate));
-				Map<String, Object> map = configure.getMap();
-				map.clear();
-				map.put("remainingdays", remainingDays);
-
-				structure.setCode(HttpStatus.OK.value());
-				structure.setMessage("remaining access in days : " + remainingDays);
-				structure.setData(map);
-				structure.setStatus("success");
-				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.FOUND);
-
+				return remainingDays;
 			} else {
 				remainingDays = 0;
 				SubscriptionDetails subcribedUser = user.getSubscriptionDetails();
@@ -281,24 +243,151 @@ public class QuantumShareUserService {
 				subcribedUser.setSubscriptiondays(0);
 				user.setSubscriptionDetails(subcribedUser);
 				userDao.save(user);
-				Map<String, Object> map = configure.getMap();
-				map.clear();
-				map.put("remainingdays", remainingDays);
-
-				structure.setCode(HttpStatus.NOT_EXTENDED.value());
-				structure.setMessage("remaining access in days : " + remainingDays);
-				structure.setData(map);
-				structure.setStatus("error");
-				structure.setPlatform(null);
-				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_EXTENDED);
-
+				return remainingDays;
 			}
 		} else {
+			return 0;
+		}
+	}
+
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedFb(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
-			structure.setMessage("Package has been expired!! Please Subscribe Your package.");
-			structure.setData(remainingDays);
+			structure.setMessage("user doesn't exists, please login");
 			structure.setStatus("error");
+			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
 		}
+		SocialAccounts accounts = user.getSocialAccounts();
+		if (accounts == null || accounts.getFacebookUser() == null) {
+			structure.setCode(114);
+			structure.setMessage("user has not connected any social media platforms");
+			structure.setPlatform(null);
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		FaceBookUser fbuser = accounts.getFacebookUser();
+		Map<String, Object> data = configure.getMap();
+		data.clear();
+		if (fbuser != null) {
+			List<FacebookPageDetails> pages = fbuser.getPageDetails();
+			Map<String, Object> pagedata = configure.getMap();
+			pagedata.clear();
+			for (FacebookPageDetails page : pages) {
+				pagedata.put(page.getPageName(), page.getPictureUrl());
+			}
+			Map<String, Object> fb = configure.getMap();
+			fb.clear();
+			fb.put("facebookUrl", fbuser.getPictureUrl());
+			fb.put("facebookUsername", fbuser.getFbuserUsername());
+			fb.put("facebookNumberofpages", fbuser.getNoOfFbPages());
+			fb.put("pages_url", pagedata);
+			data.put("facebook", fb);
+		}
+		System.out.println(data);
+		structure.setData(data);
+		structure.setCode(HttpStatus.OK.value());
+		structure.setMessage(null);
+		structure.setStatus("success");
+		structure.setPlatform(null);
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+	}
+
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedInsta1(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please login");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		SocialAccounts accounts = user.getSocialAccounts();
+		if (accounts == null || accounts.getInstagramUser() == null) {
+			structure.setCode(114);
+			structure.setMessage("user has not connected any social media platforms");
+			structure.setPlatform(null);
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		InstagramUser instaUser = accounts.getInstagramUser();
+		Map<String, Object> data = configure.getMap();
+		data.clear();
+		if (instaUser != null) {
+			Map<String, Object> insta = configure.getMap();
+			insta.clear();
+			insta.put("instagramUrl", instaUser.getPictureUrl());
+			insta.put("InstagramUsername", instaUser.getInstaUsername());
+			insta.put("Instagram_follwers_count", instaUser.getFollwersCount());
+			data.put("instagram", insta);
+		}
+		structure.setData(data);
+		structure.setCode(HttpStatus.OK.value());
+		structure.setMessage(null);
+		structure.setStatus("success");
+		structure.setPlatform(null);
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+	}
+
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedTelegram(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please login");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		SocialAccounts accounts = user.getSocialAccounts();
+		if (accounts == null || accounts.getTelegramUser() == null) {
+			structure.setCode(114);
+			structure.setMessage("user has not connected any social media platforms");
+			structure.setPlatform(null);
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		TelegramUser telegramUser = accounts.getTelegramUser();
+		Map<String, Object> data = configure.getMap();
+		data.clear();
+		if (telegramUser != null) {
+			Map<String, Object> telegram = configure.getMap();
+			telegram.clear();
+			telegram.put("telegramChatId", telegramUser.getTelegramChatId());
+			telegram.put("telegramGroupName", telegramUser.getTelegramGroupName());
+			telegram.put("telegramProfileUrl", telegramUser.getTelegramProfileUrl());
+			telegram.put("telegramGroupMembersCount", telegramUser.getTelegramGroupMembersCount());
+			data.put("telegram", telegram);
+		}
+		structure.setData(data);
+		structure.setCode(HttpStatus.OK.value());
+		structure.setMessage(null);
+		structure.setStatus("success");
+		structure.setPlatform(null);
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+	}
+
+	public ResponseEntity<ResponseStructure<String>> fetchUserInfo(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please login");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		Map<String, Object> map = configure.getMap();
+		map.put("user", user);
+		map.put("remainingdays", calculateRemainingPackageDays(user));
+		structure.setData(map);
+		structure.setCode(HttpStatus.OK.value());
+		structure.setMessage(null);
+		structure.setStatus("success");
+		structure.setPlatform(null);
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+
 	}
 }

@@ -76,9 +76,9 @@ public class FacebookAccessTokenService {
 		try {
 			if (fbUser != null) {
 				JsonNode fbuser = objectMapper.readTree(fbUser);
-				FaceBookUser savedUser=null;
+				FaceBookUser savedUser = null;
 				if (user.getSocialAccounts() == null) {
-					savedUser=faceBookUser;
+					savedUser = faceBookUser;
 					savedUser.setFbuserId(fbuser.has("id") ? fbuser.get("id").asText() : null);
 					savedUser.setFbuserUsername(fbuser.has("name") ? fbuser.get("name").asText() : null);
 					savedUser.setUserAccessToken(acceToken);
@@ -93,7 +93,7 @@ public class FacebookAccessTokenService {
 					user.setSocialAccounts(socialAccounts);
 					userDao.save(user);
 				} else if (user.getSocialAccounts().getFacebookUser() == null) {
-					savedUser=faceBookUser;
+					savedUser = faceBookUser;
 					savedUser.setFbuserId(fbuser.has("id") ? fbuser.get("id").asText() : null);
 					savedUser.setFbuserUsername(fbuser.has("name") ? fbuser.get("name").asText() : null);
 					savedUser.setUserAccessToken(acceToken);
@@ -112,7 +112,7 @@ public class FacebookAccessTokenService {
 				} else {
 					SocialAccounts socialAccounts = user.getSocialAccounts();
 					FaceBookUser exfbUser = socialAccounts.getFacebookUser();
-					savedUser=exfbUser;
+					savedUser = exfbUser;
 					savedUser.setFbuserId(fbuser.has("id") ? fbuser.get("id").asText() : null);
 					savedUser.setFbuserUsername(fbuser.has("name") ? fbuser.get("name").asText() : null);
 					savedUser.setUserAccessToken(acceToken);
@@ -129,7 +129,6 @@ public class FacebookAccessTokenService {
 
 				}
 
-				
 				List<FacebookPageDetails> pageList = new ArrayList<>();
 				if (userPage != null) {
 					JsonNode fbuserPage = objectMapper.readTree(userPage);
@@ -148,6 +147,7 @@ public class FacebookAccessTokenService {
 									&& page.get("instagram_business_account").has("id")
 											? page.get("instagram_business_account").get("id").asText()
 											: null);
+							pages.setPictureUrl(page.get("picture").get("data").get("url").asText());
 //							pageDao.savePage(pages);
 							pageProfile.put(page.get("name") != null ? page.get("name").asText() : null,
 									page.get("picture").get("data").get("url"));
@@ -161,7 +161,7 @@ public class FacebookAccessTokenService {
 						acc.setFacebookUser(fb);
 						user.setSocialAccounts(acc);
 						userDao.save(user);
-						
+
 					}
 				}
 //				facebookDao.saveUser(faceBookUser);

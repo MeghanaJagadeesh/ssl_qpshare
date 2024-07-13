@@ -212,7 +212,9 @@ public class InstagramService {
 			String containerId = container.getId();
 			GraphResponse response = client.publish(instagramUserId + "/media_publish", GraphResponse.class,
 					Parameter.with("creation_id", containerId));
+			System.out.println(response);
 			if (response.isSuccess()) {
+
 				user.setCredit(user.getCredit() - 1);
 				userDao.save(user);
 				System.out.println("insta : " + user + " " + LocalTime.now());

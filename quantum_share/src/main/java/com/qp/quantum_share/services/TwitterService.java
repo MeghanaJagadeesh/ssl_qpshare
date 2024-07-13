@@ -135,8 +135,9 @@ public class TwitterService {
 		multiValueMap.add("client_id", client_id);
 		HttpEntity<MultiValueMap<String, Object>> httpRequest = configurationClass.getHttpEntityWithMap(multiValueMap,
 				headers);
+		System.out.println("before");
 		ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, httpRequest, JsonNode.class);
-		
+		System.out.println("response : "+response);
 		if (response.getStatusCode().is2xxSuccessful()) {
 
 			JsonNode responseBody = response.getBody();
