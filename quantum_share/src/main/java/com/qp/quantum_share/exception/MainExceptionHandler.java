@@ -34,6 +34,7 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(BadRequestException.class)
 	public ResponseEntity<ResponseStructure<String>> handleBadRequest(BadRequestException exception) {
+		exception.printStackTrace();
 		structure.setMessage(exception.getMessage());
 		structure.setCode(HttpStatus.NOT_ACCEPTABLE.value());
 		structure.setStatus("error");
@@ -77,6 +78,7 @@ public class MainExceptionHandler extends RuntimeException {
 
 	@ExceptionHandler(CommonException.class)
 	public ResponseEntity<ResponseStructure<String>> handleCommonException(CommonException exception) {
+		exception.printStackTrace();
 		structure.setMessage(exception.message);
 		structure.setCode(HttpStatus.NOT_ACCEPTABLE.value());
 		structure.setStatus("error");
@@ -85,6 +87,7 @@ public class MainExceptionHandler extends RuntimeException {
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
 	}
 
+	
 //	@ExceptionHandler(FacebookOAuthException.class)
 //	public ResponseEntity<ResponseStructure<String>> handleFacebookOAuthException(FacebookOAuthException exception) {
 //		System.out.println("FacebookException  ");
@@ -159,6 +162,14 @@ public class MainExceptionHandler extends RuntimeException {
 	@ExceptionHandler(FBException.class)
 	public ResponseEntity<ResponseStructure<String>> handleFBException(FBException exception) {
 		String message = null;
+		if(exception.message.contains("The aspect ratio is not supported.")) {
+			structure.setMessage("Unsupported aspect ratio. Please use one of Instagram's formats: 4:5, 1:1, or 1.91:1.");
+			structure.setCode(116);
+			structure.setStatus("error");
+			structure.setPlatform(exception.getPlatform());
+			structure.setData(exception.getLocalizedMessage());
+			return new ResponseEntity<>(structure, HttpStatus.OK);
+		}
 		if (exception.getMessage().contains(":")) {
 			message = exception.getMessage().split(":")[1];
 		}
@@ -176,6 +187,7 @@ public class MainExceptionHandler extends RuntimeException {
 		if (exception.toString().contains(":")) {
 			message = exception.toString().split(":")[1];
 		}
+		exception.printStackTrace();
 		structure.setMessage(message);
 		structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 		structure.setStatus("error");

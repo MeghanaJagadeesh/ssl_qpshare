@@ -30,4 +30,10 @@ public class SocialAccounts {
 	
 	@OneToOne(cascade = CascadeType.ALL)
 	private TwitterUser twitterUser;
+	
+	@OneToOne(cascade = CascadeType.ALL)
+	private LinkedInProfileDto linkedInProfileDto;
+	
+	@OneToOne(cascade = CascadeType.ALL)
+	private YoutubeUser youtubeUser;
 }

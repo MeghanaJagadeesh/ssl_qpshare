@@ -18,10 +18,13 @@ import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dto.FaceBookUser;
 import com.qp.quantum_share.dto.FacebookPageDetails;
 import com.qp.quantum_share.dto.InstagramUser;
+import com.qp.quantum_share.dto.LinkedInPageDto;
+import com.qp.quantum_share.dto.LinkedInProfileDto;
 import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.dto.SocialAccounts;
 import com.qp.quantum_share.dto.SubscriptionDetails;
 import com.qp.quantum_share.dto.TelegramUser;
+import com.qp.quantum_share.dto.YoutubeUser;
 import com.qp.quantum_share.helper.GenerateId;
 import com.qp.quantum_share.helper.JwtToken;
 import com.qp.quantum_share.helper.SecurePassword;
@@ -34,6 +37,9 @@ public class QuantumShareUserService {
 
 	@Value("${quantumshare.freetrail}")
 	private int freetrail;
+
+	@Value("${default.profile.picture}")
+	private String defaultProfile;
 
 	@Autowired
 	ResponseStructure<String> structure;
@@ -78,6 +84,7 @@ public class QuantumShareUserService {
 			QuantumShareUser user = users.get(0);
 			if (SecurePassword.decrypt(user.getPassword(), "123").equals(password)) {
 				if (user.isVerified()) {
+					applyCredit(user);
 					String tokenValue = token.generateJWT(user);
 					structure.setCode(HttpStatus.OK.value());
 					structure.setMessage("Login Successful");
@@ -106,6 +113,10 @@ public class QuantumShareUserService {
 		}
 	}
 
+	private void applyCredit(QuantumShareUser user) {
+
+	}
+
 	public ResponseEntity<ResponseStructure<String>> userSignUp(QuantumShareUser user) {
 		List<QuantumShareUser> exUser = userDao.findByEmailOrPhoneNo(user.getEmail(), user.getPhoneNo());
 		if (!exUser.isEmpty()) {
@@ -115,10 +126,6 @@ public class QuantumShareUserService {
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_ACCEPTABLE);
 		} else {
-
-//			String userId = generateId.generateuserId();
-//			System.out.println("userId : " + userId);
-//			user.setUserId(userId);
 			user.setPassword(SecurePassword.encrypt(user.getPassword(), "123"));
 			userDao.saveUser(user);
 
@@ -261,9 +268,9 @@ public class QuantumShareUserService {
 		}
 		SocialAccounts accounts = user.getSocialAccounts();
 		if (accounts == null || accounts.getFacebookUser() == null) {
-			structure.setCode(114);
-			structure.setMessage("user has not connected any social media platforms");
-			structure.setPlatform(null);
+			structure.setCode(119);
+			structure.setMessage("user has not connected facebook platforms");
+			structure.setPlatform("facebook");
 			structure.setStatus("error");
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
@@ -306,9 +313,9 @@ public class QuantumShareUserService {
 		}
 		SocialAccounts accounts = user.getSocialAccounts();
 		if (accounts == null || accounts.getInstagramUser() == null) {
-			structure.setCode(114);
-			structure.setMessage("user has not connected any social media platforms");
-			structure.setPlatform(null);
+			structure.setCode(119);
+			structure.setMessage("user has not connected Instagram platforms");
+			structure.setPlatform("instagram");
 			structure.setStatus("error");
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
@@ -318,8 +325,14 @@ public class QuantumShareUserService {
 		data.clear();
 		if (instaUser != null) {
 			Map<String, Object> insta = configure.getMap();
+			String instagramUrl;
+			if (instaUser.getPictureUrl() == null) {
+				instagramUrl = defaultProfile;
+			} else {
+				instagramUrl = instaUser.getPictureUrl();
+			}
 			insta.clear();
-			insta.put("instagramUrl", instaUser.getPictureUrl());
+			insta.put("instagramUrl", instagramUrl);
 			insta.put("InstagramUsername", instaUser.getInstaUsername());
 			insta.put("Instagram_follwers_count", instaUser.getFollwersCount());
 			data.put("instagram", insta);
@@ -343,9 +356,9 @@ public class QuantumShareUserService {
 		}
 		SocialAccounts accounts = user.getSocialAccounts();
 		if (accounts == null || accounts.getTelegramUser() == null) {
-			structure.setCode(114);
-			structure.setMessage("user has not connected any social media platforms");
-			structure.setPlatform(null);
+			structure.setCode(119);
+			structure.setMessage("user has not connected telegram platforms");
+			structure.setPlatform("telegram");
 			structure.setStatus("error");
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
@@ -356,9 +369,15 @@ public class QuantumShareUserService {
 		if (telegramUser != null) {
 			Map<String, Object> telegram = configure.getMap();
 			telegram.clear();
+			String imageUrl;
+			if (telegramUser.getTelegramProfileUrl() == null) {
+				imageUrl = defaultProfile;
+			} else {
+				imageUrl = telegramUser.getTelegramProfileUrl();
+			}
 			telegram.put("telegramChatId", telegramUser.getTelegramChatId());
 			telegram.put("telegramGroupName", telegramUser.getTelegramGroupName());
-			telegram.put("telegramProfileUrl", telegramUser.getTelegramProfileUrl());
+			telegram.put("telegramProfileUrl", imageUrl);
 			telegram.put("telegramGroupMembersCount", telegramUser.getTelegramGroupMembersCount());
 			data.put("telegram", telegram);
 		}
@@ -379,8 +398,16 @@ public class QuantumShareUserService {
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
 		}
+		Map<String, Object> usermap = configure.getMap();
+		usermap.put("userId", user.getUserId());
+		usermap.put("username", user.getFirstName() + " " + user.getLastName());
+		usermap.put("email", user.getEmail());
+		usermap.put("profilepic", user.getProfilePic());
+		usermap.put("socialAccounts", user.getSocialAccounts());
+		usermap.put("credit", user.getCredit());
+
 		Map<String, Object> map = configure.getMap();
-		map.put("user", user);
+		map.put("user", usermap);
 		map.put("remainingdays", calculateRemainingPackageDays(user));
 		structure.setData(map);
 		structure.setCode(HttpStatus.OK.value());
@@ -389,5 +416,104 @@ public class QuantumShareUserService {
 		structure.setPlatform(null);
 		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
 
+	}
+
+	public ResponseEntity<ResponseStructure<String>> fetchLinkedIn(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please login");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		SocialAccounts accounts = user.getSocialAccounts();
+		if (accounts == null || accounts.getLinkedInProfileDto() == null) {
+			structure.setCode(119);
+			structure.setMessage("user has not connected linkedIn platforms");
+			structure.setPlatform("linkedIn");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		LinkedInProfileDto linkedInUser = accounts.getLinkedInProfileDto();
+		Map<String, Object> data = configure.getMap();
+		Map<String, Object> linkedIn = configure.getMap();
+		data.clear();
+		linkedIn.clear();
+		String imageUrl = null;
+		if (linkedInUser.getLinkedinProfileURN() != null) {
+			if (linkedInUser.getLinkedinProfileImage() == null) {
+				imageUrl = defaultProfile;
+			} else {
+				imageUrl = linkedInUser.getLinkedinProfileImage();
+			}
+			linkedIn.put("linkedInProfilePic", imageUrl);
+			linkedIn.put("linkedInUserName", linkedInUser.getLinkedinProfileUserName());
+			data.put("linkedIn", linkedIn);
+		} else if (linkedInUser.getPages().get(0).getLinkedinPageURN() != null) {
+			LinkedInPageDto linkedInPage = linkedInUser.getPages().get(0);
+			if (linkedInPage.getLinkedinPageImage() == null) {
+				imageUrl = defaultProfile;
+			} else {
+				imageUrl = linkedInPage.getLinkedinPageImage();
+			}
+			System.out.println(imageUrl);
+			linkedIn.put("linkedInProfilePic", imageUrl);
+			linkedIn.put("linkedInUserName", linkedInPage.getLinkedinPageName());
+			linkedIn.put("linkedInFollowersCount", linkedInPage.getLinkedinPageFollowers());
+			data.put("linkedIn", linkedIn);
+		}
+
+		structure.setData(data);
+		structure.setCode(HttpStatus.OK.value());
+		structure.setMessage(null);
+		structure.setStatus("success");
+		structure.setPlatform("linkedIn");
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+
+	}
+
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedYoutube(int userId) {
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please login");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		SocialAccounts accounts = user.getSocialAccounts();
+		if (accounts == null || accounts.getYoutubeUser() == null) {
+			structure.setCode(119);
+			structure.setMessage("user has not connected youtube platforms");
+			structure.setPlatform("youtube");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
+		}
+		YoutubeUser youTubeUser = accounts.getYoutubeUser();
+		Map<String, Object> data = configure.getMap();
+		data.clear();
+		if (youTubeUser != null) {
+			Map<String, Object> youtube = configure.getMap();
+			String youTubeUrl;
+			if (youTubeUser.getChannelImageUrl() == null) {
+				youTubeUrl = defaultProfile;
+			} else {
+				youTubeUrl = youTubeUser.getChannelImageUrl();
+			}
+			youtube.clear();
+			youtube.put("youtubeUrl", youTubeUrl);
+			youtube.put("youtubeChannelName", youTubeUser.getChannelName());
+			youtube.put("youtubeSubscriberCount", youTubeUser.getSubscriberCount());
+			data.put("youtube", youtube);
+		}
+		structure.setData(data);
+		structure.setCode(HttpStatus.OK.value());
+		structure.setMessage(null);
+		structure.setStatus("success");
+		structure.setPlatform("youtube");
+		return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
 	}
 }

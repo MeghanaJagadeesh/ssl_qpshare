@@ -1,8 +1,16 @@
 package com.qp.quantum_share.webhook;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.apache.commons.codec.binary.Hex;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,85 +22,60 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/webhook")
 public class WebhookController {
 
-	private static final String VERIFY_TOKEN = "VERIFYTOKEN@123";
-	private final ObjectMapper objectMapper = new ObjectMapper();
+    @Value("${app.secret}")
+    private String appSecret;
 
-	@GetMapping
-	public String verifyWebhook(@RequestParam("hub.mode") String mode, @RequestParam("hub.verify_token") String token,
-			@RequestParam("hub.challenge") String challenge) {
-		if ("subscribe".equals(mode) && VERIFY_TOKEN.equals(token)) {
-			return challenge;
-		} else {
-			return "Verification failed";
-		}
-	}
+    @Value("${app.verify.token}")
+    private String verifyToken;
 
-//    @PostMapping
-//    public void handleWebhook(@RequestBody String payload) {
-//        try {
-//            JsonNode jsonNode = objectMapper.readTree(payload);
-//            if (jsonNode.has("entry")) {
-//                JsonNode entries = jsonNode.get("entry");
-//                for (JsonNode entry : entries) {
-//                    // Process each entry
-//                    System.out.println("Entry: " + entry);
-//                    // Further processing based on the event type
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
-	@PostMapping
-	public void handleWebhook(@RequestBody String payload) {
-		try {
-			JsonNode jsonNode = objectMapper.readTree(payload);
-			if (jsonNode.has("entry")) {
-				JsonNode entries = jsonNode.get("entry");
-				for (JsonNode entry : entries) {
-					if (entry.has("changes")) {
-						JsonNode changes = entry.get("changes");
-						for (JsonNode change : changes) {
-							String field = change.get("field").asText();
-							if ("feed".equals(field)) {
-								JsonNode value = change.get("value");
-								String item = value.get("item").asText();
-								String verb = value.get("verb").asText();
-								String postId = value.get("post_id").asText();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-								// Handle the feed change
-								System.out.println("Received feed event: " + item + " " + verb + " for post " + postId);
+    @GetMapping
+    public ResponseEntity<String> verifyWebhook(@RequestParam("hub.mode") String mode, 
+                                                @RequestParam("hub.verify_token") String token, 
+                                                @RequestParam("hub.challenge") String challenge) {
+        if ("subscribe".equals(mode) && verifyToken.equals(token)) {
+            return ResponseEntity.ok(challenge);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Verification failed");
+        }
+    }
 
-								// Further processing based on the event type
-								if ("post".equals(item)) {
-									if ("add".equals(verb)) {
-										// New post added
-										String message = value.get("message").asText();
-										System.out.println("New post: " + message);
-									} else if ("edit".equals(verb)) {
-										// Post edited
-										System.out.println("Post edited: " + postId);
-									}
-								} else if ("comment".equals(item)) {
-									// Handle comment events
-									String commentId = value.get("comment_id").asText();
-									if ("add".equals(verb)) {
-										// New comment added
-										String message = value.get("message").asText();
-										System.out.println("New comment: " + message);
-									} else if ("edit".equals(verb)) {
-										// Comment edited
-										System.out.println("Comment edited: " + commentId);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+    @PostMapping("/facebook")
+    public ResponseEntity<String> handleFacebookWebhook(@RequestHeader("X-Hub-Signature") String signature,
+                                                        @RequestBody String payload) {
+        if (!isValidSignature(payload, signature)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
+        }
 
+        try {
+            JsonNode jsonNode = objectMapper.readTree(payload);
+            processFacebookUpdate(jsonNode);
+            return ResponseEntity.ok("EVENT_RECEIVED");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid payload");
+        }
+    }
+
+    private boolean isValidSignature(String payload, String signature) {
+        try {
+            String[] parts = signature.split("=");
+            String algorithm = parts[0];
+            String expectedSignature = parts[1];
+
+            Mac mac = Mac.getInstance(algorithm);
+            mac.init(new SecretKeySpec(appSecret.getBytes(), algorithm));
+            byte[] digest = mac.doFinal(payload.getBytes());
+
+            return Hex.encodeHexString(digest).equals(expectedSignature);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void processFacebookUpdate(JsonNode jsonNode) {
+        // Process the Facebook update here
+        System.out.println("Facebook request body: " + jsonNode);
+    }
 }

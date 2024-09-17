@@ -137,7 +137,7 @@ public class TwitterService {
 				headers);
 		System.out.println("before");
 		ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, httpRequest, JsonNode.class);
-		System.out.println("response : "+response);
+		System.out.println("response : " + response);
 		if (response.getStatusCode().is2xxSuccessful()) {
 
 			JsonNode responseBody = response.getBody();
@@ -230,7 +230,7 @@ public class TwitterService {
 	}
 
 	private String fetchUser(String access_token) {
-		
+
 		try {
 			String apiUrl = "https://api.twitter.com/2/users/me?user.fields=id,name,profile_image_url,username,public_metrics";
 			headers.setBearerAuth(access_token);
@@ -303,7 +303,7 @@ public class TwitterService {
 			UploadedMedia response = twitter.v1().tweets().uploadMediaChunked(mediaFile.getOriginalFilename(),
 					mediaFile.getInputStream());
 			long mediaId = response.getMediaId();
-			
+
 			if (mediaId != 0) {
 				return postTweet(mediaId, mediaPost, twitteruser2, user);
 
@@ -330,14 +330,14 @@ public class TwitterService {
 	private ResponseEntity<ResponseWrapper> postImageOnTwitter(MediaPost mediaPost, MultipartFile mediaFile,
 			TwitterUser twitteruser, QuantumShareUser user) throws TwitterException {
 		try {
-			
+
 			// step-1 upload image
 			Twitter twitter = Twitter.newBuilder().oAuthConsumer(consumerKey, consumerSecret)
 					.oAuthAccessToken(accessToken, accessTokenSecret).build();
 			UploadedMedia response = twitter.v1().tweets().uploadMedia(convertMultipartFileToFile(mediaFile));
-			
+
 			long mediaId = response.getMediaId();
-			
+			System.out.println(mediaId);
 			if (mediaId != 0) {
 				return postTweet(mediaId, mediaPost, twitteruser, user);
 
@@ -363,6 +363,7 @@ public class TwitterService {
 
 	private ResponseEntity<ResponseWrapper> postTweet(long mediaId, MediaPost mediaPost, TwitterUser twitteruser2,
 			QuantumShareUser user) {
+		System.out.println(" postTweet -  ");
 		try {
 			if (mediaPost.getCaption() == null) {
 				mediaPost.setCaption(" ");
@@ -374,13 +375,14 @@ public class TwitterService {
 			}
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			headers.setBearerAuth(access_token);
-
+			System.out.println("before request");
 			String requestBody = String.format("{\"text\": \"%s\", \"media\": {\"media_ids\": [\"%s\"]}}",
 					mediaPost.getCaption(), mediaId);
 
 			HttpEntity<String> httpRequest = configurationClass.getHttpEntity(requestBody, headers);
 			ResponseEntity<JsonNode> response = restTemplate.exchange(apiUrl, HttpMethod.POST, httpRequest,
 					JsonNode.class);
+			System.out.println("response :   " + response);
 			if (response.getStatusCode().is2xxSuccessful()) {
 				successResponse.setCode(HttpStatus.OK.value());
 				successResponse.setMessage("Posted On Twitter");
@@ -434,7 +436,7 @@ public class TwitterService {
 			requestBody.add("refresh_token", twitteruser2.getRefresh_token());
 			requestBody.add("grant_type", "refresh_token");
 			requestBody.add("client_id", client_id);
-			
+
 			HttpEntity<MultiValueMap<String, Object>> httpRequest = configurationClass.getHttpEntityWithMap(requestBody,
 					headers);
 			ResponseEntity<JsonNode> response = restTemplate.exchange(apiUrl, HttpMethod.POST, httpRequest,

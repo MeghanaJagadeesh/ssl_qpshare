@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.qp.quantum_share.dto.FacebookPageDetails;
 import com.qp.quantum_share.dto.PaymentDetails;
+import com.qp.quantum_share.dto.SocialMediaPosts;
 import com.qp.quantum_share.response.ErrorResponse;
 import com.qp.quantum_share.response.ResponseStructure;
 import com.qp.quantum_share.response.ResponseWrapper;
@@ -60,7 +61,6 @@ public class ConfigurationClass {
 	public Map<String, Object> getMap() {
 		return new HashMap<String, Object>();
 	}
-
 
 	@Bean
 	public MultiValueMap<String, Object> getMultiValueMap() {
@@ -109,6 +109,12 @@ public class ConfigurationClass {
 	@Bean
 	public List<Object> getList() {
 		return new ArrayList<Object>();
+	}
+
+	@Bean
+	@Lazy
+	public List<SocialMediaPosts> getListOfPost() {
+		return new ArrayList<SocialMediaPosts>();
 	}
 
 	@Bean
@@ -164,5 +170,17 @@ public class ConfigurationClass {
 	@Lazy
 	public HttpEntity<Map<String, Object>> getMapHttpEntity(Map<String, Object> body, HttpHeaders headers) {
 		return new HttpEntity<>(body, headers);
+	}
+
+	@Bean
+	@Lazy
+	public SocialMediaPosts getsocialMediaPosts() {
+		return new SocialMediaPosts();
+	}
+	
+	@Bean
+	@Lazy
+	public HttpEntity<byte[]> getByteHttpEntity(byte[] byteArray, HttpHeaders headers) {
+		return new HttpEntity<>(byteArray, headers);
 	}
 }

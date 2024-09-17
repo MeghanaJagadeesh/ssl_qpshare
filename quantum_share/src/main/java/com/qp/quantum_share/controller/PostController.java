@@ -80,6 +80,7 @@ public class PostController {
 			response.add(structure);
 			return new ResponseEntity<List<Object>>(response, HttpStatus.UNAUTHORIZED);
 		}
+		System.out.println("controller");
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
 		QuantumShareUser user = userDao.fetchUser(userId);
@@ -285,5 +286,101 @@ public class PostController {
 			throw new CommonException(e.getMessage());
 		}
 	}
+	
+	
+	// TEXT AND MEDIA UPLOAD TO LinkedIn PROFILE
+	@PostMapping("/post/file/linkedIn")
+	public ResponseEntity<ResponseWrapper> createPostTOProfile(MultipartFile mediaFile,
+			@ModelAttribute MediaPost mediaPost) {
+
+		System.out.println(mediaPost.getCaption());
+
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform("LinkedIn");
+			structure.setData(null);
+			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+					HttpStatus.UNAUTHORIZED);
+		}
+
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user doesn't exists, please signup");
+			structure.setStatus("error");
+			structure.setData(null);
+			structure.setPlatform("LinkedIn");
+			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+					HttpStatus.NOT_FOUND);
+		}
+		try {
+			if (mediaPost.getMediaPlatform() == null || mediaPost.getMediaPlatform() == "") {
+				structure.setCode(HttpStatus.BAD_REQUEST.value());
+				structure.setStatus("error");
+				structure.setMessage("select social media platforms");
+				structure.setData(null);
+				structure.setPlatform("LinkedIn");
+				return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+						HttpStatus.BAD_REQUEST);
+			} else {
+				return postServices.prePostOnLinkedIn(mediaPost, mediaFile, user);
+			}
+		} catch (NullPointerException e) {
+			throw new NullPointerException(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			throw new CommonException(e.getMessage());
+		}
+	}
+
+	// Youtube
+	@PostMapping("/post/file/youtube")
+	public ResponseEntity<ResponseWrapper> postToYoutube(MultipartFile mediaFile, @ModelAttribute MediaPost mediaPost) {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform("youtube");
+			structure.setData(null);
+			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+					HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); 
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		QuantumShareUser user = userDao.fetchUser(userId);
+		if (user == null) {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("User doesn't Exists, Please Signup");
+			structure.setStatus("error");
+			structure.setData(null);
+			structure.setPlatform("youtube");
+			return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+					HttpStatus.NOT_FOUND);
+		}
+		try {
+			if (mediaPost.getMediaPlatform() == null || mediaPost.getMediaPlatform() == "") {
+				structure.setCode(HttpStatus.BAD_REQUEST.value());
+				structure.setStatus("error");
+				structure.setMessage("Select Social Media Platforms");
+				structure.setData(null);
+				structure.setPlatform("youtube");
+				return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
+						HttpStatus.BAD_REQUEST);
+			} else {
+				System.out.println("In the Post Controller");
+				return postServices.postOnYoutube(mediaPost, mediaFile, user.getSocialAccounts());
+			}
+		} catch (NullPointerException e) {
+			throw new NullPointerException(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			throw new CommonException(e.getMessage());
+		}
+	}
+
 
 }

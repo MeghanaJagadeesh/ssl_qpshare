@@ -27,6 +27,9 @@ public class SendMail {
 		MimeMessageHelper helper = new MimeMessageHelper(message);
 		String verificationLink = "https://quantumshare.quantumparadigm.in/verify?token="
 				+ userDto.getVerificationToken();
+
+//		String verificationLink = "https://appreview.quantumparadigm.in/verify?token="
+//				+ userDto.getVerificationToken();
 //		String verificationLink = "http://localhost:3000/verify?token=" + userDto.getVerificationToken();
 //		String verificationLink = "http://localhost:7532/quantum-socialshare/user/verify?token="
 //				+ userDto.getVerificationToken();
@@ -38,9 +41,6 @@ public class SendMail {
 			htmlBody = htmlBody.replace("{{USERNAME}}", userDto.getFirstName() + " " + userDto.getLastName());
 			htmlBody = htmlBody.replace("{{VERIFICATION_LINK}}", verificationLink);
 			helper.setText(htmlBody, true);
-//			helper.setText("<html><body><h1>Hello " + userDto.getFirstName() + "</h1>"
-//					+ "<p>Please verify your email by clicking the link below:</p>" + "<a href='" + verificationLink
-//					+ "'>" + verificationLink + "</a>" + "<h3>Thanks and Regards</h3></body></html>", true);
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		} catch (MessagingException e) {

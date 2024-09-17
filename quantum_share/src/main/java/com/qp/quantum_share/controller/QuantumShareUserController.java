@@ -88,7 +88,6 @@ public class QuantumShareUserController {
 			structure.setPlatform(null);
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
-
 		}
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
@@ -179,9 +178,9 @@ public class QuantumShareUserController {
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
 		return quantumShareUserService.fetchConnectedTelegram(userId);
 	}
-	
-	@GetMapping("/info")
-	public ResponseEntity<ResponseStructure<String>> fetchUserInfo(){
+
+	@GetMapping("/connected/socialmedia/linkedIn")
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedLinkedIn() {
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
 			structure.setCode(115);
@@ -193,7 +192,45 @@ public class QuantumShareUserController {
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
-		return quantumShareUserService.fetchUserInfo(userId);	
+		return quantumShareUserService.fetchLinkedIn(userId);
 	}
 
+	@GetMapping("/info")
+	public ResponseEntity<ResponseStructure<String>> fetchUserInfo() {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		return quantumShareUserService.fetchUserInfo(userId);
+	}
+
+	@GetMapping("/connected/socialmedia/youtube")
+	public ResponseEntity<ResponseStructure<String>> fetchConnectedYoutube() {
+		String token = request.getHeader("Authorization");
+		if (token == null || !token.startsWith("Bearer ")) {
+			structure.setCode(115);
+			structure.setMessage("Missing or invalid authorization token");
+			structure.setStatus("error");
+			structure.setPlatform(null);
+			structure.setData(null);
+			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.UNAUTHORIZED);
+		}
+		String jwtToken = token.substring(7); // remove "Bearer " prefix
+		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		return quantumShareUserService.fetchConnectedYoutube(userId);
+	}
+
+	@PostMapping("/login/google/authentication")
+	public QuantumShareUser loginWithGoogle(@RequestBody QuantumShareUser userDto) {
+		System.out.println(userDto);
+		System.out.println("tostring override : " + userDto.toString());
+		return userDto;
+	}
 }

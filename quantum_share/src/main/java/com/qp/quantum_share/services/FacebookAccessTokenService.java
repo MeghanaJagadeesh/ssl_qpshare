@@ -76,6 +76,7 @@ public class FacebookAccessTokenService {
 		try {
 			if (fbUser != null) {
 				JsonNode fbuser = objectMapper.readTree(fbUser);
+				System.out.println("fb "+fbUser);
 				FaceBookUser savedUser = null;
 				if (user.getSocialAccounts() == null) {
 					savedUser = faceBookUser;

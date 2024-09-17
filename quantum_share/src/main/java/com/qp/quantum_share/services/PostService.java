@@ -13,6 +13,8 @@ import com.qp.quantum_share.dao.FacebookUserDao;
 import com.qp.quantum_share.dao.InstagramUserDao;
 import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dao.TelegramUserDao;
+import com.qp.quantum_share.dao.YoutubeUserDao;
+import com.qp.quantum_share.dto.LinkedInProfileDto;
 import com.qp.quantum_share.dto.MediaPost;
 import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.dto.SocialAccounts;
@@ -57,6 +59,18 @@ public class PostService {
 
 	@Autowired
 	TwitterService twitterService;
+
+	@Autowired
+	LinkedInProfilePostService linkedInProfilePostService;
+
+	@Autowired
+	LinkedInProfileDto linkedInProfileDto;
+
+	@Autowired
+	YoutubeService youtubeService;
+
+	@Autowired
+	YoutubeUserDao youtubeUserDao;
 
 	public ResponseEntity<List<Object>> postOnFb(MediaPost mediaPost, MultipartFile mediaFile, QuantumShareUser user) {
 		SocialAccounts socialAccounts = user.getSocialAccounts();
@@ -115,7 +129,7 @@ public class PostService {
 
 	public ResponseEntity<ResponseWrapper> postOnTelegram(MediaPost mediaPost, MultipartFile mediaFile,
 			QuantumShareUser user) {
-		SocialAccounts socialAccounts=user.getSocialAccounts();
+		SocialAccounts socialAccounts = user.getSocialAccounts();
 		if (mediaPost.getMediaPlatform().contains("telegram")) {
 			if (socialAccounts == null || socialAccounts.getTelegramUser() == null) {
 				structure.setMessage("Please Connect Your Telegram Account");
@@ -126,8 +140,7 @@ public class PostService {
 				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
 			}
 			if (socialAccounts.getTelegramUser() != null) {
-				return telegramService.postMediaToGroup(mediaPost, mediaFile,
-						socialAccounts.getTelegramUser(),user);
+				return telegramService.postMediaToGroup(mediaPost, mediaFile, socialAccounts.getTelegramUser(), user);
 			} else {
 				structure.setMessage("Please Connect Your Telegram Account");
 				structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -153,6 +166,151 @@ public class PostService {
 				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
 			} else {
 				return twitterService.postOnTwitter(mediaPost, mediaFile, socialAccounts.getTwitterUser(), user);
+			}
+		}
+		return null;
+	}
+
+	public ResponseEntity<ResponseWrapper> postOnLinkedIn(MediaPost mediaPost, MultipartFile mediaFile,
+			SocialAccounts socialAccounts) {
+
+		if (mediaPost.getMediaPlatform().contains("LinkedIn")) {
+			if (socialAccounts == null || socialAccounts.getLinkedInProfileDto() == null) {
+				structure.setMessage("Please connect your LinkedIn account");
+				structure.setCode(HttpStatus.NOT_FOUND.value());
+				structure.setPlatform("LinkedIn");
+				structure.setStatus("error");
+				structure.setData(null);
+				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
+			}
+
+			LinkedInProfileDto linkedInProfileUser = socialAccounts.getLinkedInProfileDto();
+			ResponseStructure<String> response;
+
+			if (mediaFile != null && !mediaFile.isEmpty() && mediaPost.getCaption() != null
+					&& !mediaPost.getCaption().isEmpty()) {
+				response = linkedInProfilePostService.uploadImageToLinkedIn(mediaFile, mediaPost.getCaption(),
+						linkedInProfileUser);
+			} else if (mediaPost.getCaption() != null && !mediaPost.getCaption().isEmpty()) {
+				response = linkedInProfilePostService.createPostProfile(mediaPost.getCaption(), linkedInProfileUser);
+			} else if (mediaFile != null && !mediaFile.isEmpty()) {
+				response = linkedInProfilePostService.uploadImageToLinkedIn(mediaFile, "", linkedInProfileUser);
+			} else {
+				structure.setStatus("Failure");
+				structure.setMessage("Please connect your LinkedIn account");
+				structure.setCode(HttpStatus.BAD_REQUEST.value());
+				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure),
+						HttpStatus.BAD_REQUEST);
+			}
+
+			// Map the response from ResponseStructure to ResponseWrapper
+			structure.setStatus(response.getStatus());
+			structure.setMessage(response.getMessage());
+			structure.setCode(response.getCode());
+			structure.setData(response.getData());
+			return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure),
+					HttpStatus.valueOf(response.getCode()));
+		}
+		structure.setMessage("Please connect your LinkedIn account");
+		structure.setCode(HttpStatus.BAD_REQUEST.value());
+		structure.setPlatform("LinkedIn");
+		structure.setStatus("error");
+		structure.setData(null);
+		return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.BAD_REQUEST);
+	}
+
+	public ResponseEntity<ResponseWrapper> postOnLinkedInPage(MediaPost mediaPost, MultipartFile mediaFile,
+			SocialAccounts socialAccounts) {
+		ResponseStructure<String> response;
+
+		if (mediaPost.getMediaPlatform().contains("LinkedIn")) {
+			if (socialAccounts == null || socialAccounts.getLinkedInProfileDto() == null) {
+				structure.setMessage("Please connect your LinkedIn account");
+				structure.setCode(HttpStatus.NOT_FOUND.value());
+				structure.setPlatform("LinkedIn");
+				structure.setStatus("error");
+				structure.setData(null);
+				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
+			}
+
+			LinkedInProfileDto linkedInProfileUser = socialAccounts.getLinkedInProfileDto();
+
+			if (mediaFile != null && !mediaFile.isEmpty() && mediaPost.getCaption() != null
+					&& !mediaPost.getCaption().isEmpty()) {
+				// Both file and caption are present
+				response = linkedInProfilePostService.uploadImageToLinkedInPage(mediaFile, mediaPost.getCaption(),
+						linkedInProfileUser);
+			} else if (mediaPost.getCaption() != null && !mediaPost.getCaption().isEmpty()) {
+				// Only caption is present
+				response = linkedInProfilePostService.createPostPage(mediaPost.getCaption(), linkedInProfileUser);
+			} else if (mediaFile != null && !mediaFile.isEmpty()) {
+				// Only file is present
+				response = linkedInProfilePostService.uploadImageToLinkedInPage(mediaFile, "", linkedInProfileUser);
+			} else {
+				// Neither file nor caption are present
+				structure.setStatus("Failure");
+				structure.setMessage("Please connect your LinkedIn account");
+				structure.setCode(HttpStatus.BAD_REQUEST.value());
+				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure),
+						HttpStatus.BAD_REQUEST);
+			}
+
+			// Map the response from ResponseStructure to ResponseWrapper
+			structure.setStatus(response.getStatus());
+			structure.setMessage(response.getMessage());
+			structure.setCode(response.getCode());
+			structure.setData(response.getData());
+			return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure),
+					HttpStatus.valueOf(response.getCode()));
+		}
+
+		structure.setMessage("Please connect your LinkedIn account");
+		structure.setCode(HttpStatus.BAD_REQUEST.value());
+		structure.setPlatform("LinkedIn");
+		structure.setStatus("error");
+		structure.setData(null);
+		return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.BAD_REQUEST);
+	}
+
+	public ResponseEntity<ResponseWrapper> prePostOnLinkedIn(MediaPost mediaPost, MultipartFile mediaFile,
+			QuantumShareUser user) {
+		LinkedInProfileDto linkedInProfile = user.getSocialAccounts().getLinkedInProfileDto();
+		if (linkedInProfile.getLinkedinProfileURN() != null) {
+			return postOnLinkedIn(mediaPost, mediaFile, user.getSocialAccounts());
+		} else if (linkedInProfile.getPages().get(0).getLinkedinPageURN() != null) {
+			return postOnLinkedInPage(mediaPost, mediaFile, user.getSocialAccounts());
+		} else {
+			structure.setCode(HttpStatus.NOT_FOUND.value());
+			structure.setMessage("user has not connected LinkedIn profile");
+			structure.setPlatform("linkedIn");
+			structure.setStatus("error");
+			structure.setData(null);
+			return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
+		}
+	}
+
+	// Youtube
+	public ResponseEntity<ResponseWrapper> postOnYoutube(MediaPost mediaPost, MultipartFile mediaFile,
+			SocialAccounts socialAccounts) {
+		if (mediaPost.getMediaPlatform().contains("youtube")) {
+			if (socialAccounts == null || socialAccounts.getYoutubeUser() == null) {
+				structure.setMessage("Please Connect Your Youtube Account");
+				structure.setCode(HttpStatus.NOT_FOUND.value());
+				structure.setPlatform("youtube");
+				structure.setStatus("error");
+				structure.setData(null);
+				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
+			}
+			if (socialAccounts.getYoutubeUser() != null) {
+				return youtubeService.postMediaToChannel(mediaPost, mediaFile,
+						youtubeUserDao.findById(socialAccounts.getYoutubeUser().getYoutubeId()));
+			} else {
+				structure.setMessage("Please Connect Your Youtube Account");
+				structure.setCode(HttpStatus.NOT_FOUND.value());
+				structure.setPlatform("youtube");
+				structure.setStatus("error");
+				structure.setData(null);
+				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
 			}
 		}
 		return null;
