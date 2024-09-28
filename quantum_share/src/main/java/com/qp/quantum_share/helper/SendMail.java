@@ -11,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dto.QuantumShareUser;
 import com.qp.quantum_share.exception.CommonException;
 
@@ -22,24 +23,49 @@ public class SendMail {
 	@Autowired
 	JavaMailSender mailSender;
 
-	public void sendVerificationEmail(QuantumShareUser userDto) {
+	@Autowired
+	QuantumShareUserDao userDao;
+
+	public void sendVerificationEmail(QuantumShareUser userDto, String type) {
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message);
-		String verificationLink = "https://quantumshare.quantumparadigm.in/verify?token="
-				+ userDto.getVerificationToken();
 
-//		String verificationLink = "https://appreview.quantumparadigm.in/verify?token="
-//				+ userDto.getVerificationToken();
 //		String verificationLink = "http://localhost:3000/verify?token=" + userDto.getVerificationToken();
-//		String verificationLink = "http://localhost:7532/quantum-socialshare/user/verify?token="
-//				+ userDto.getVerificationToken();
+
 		try {
 			helper.setFrom("quantumshare12@gmail.com", "QuantumShare");
 			helper.setTo(userDto.getEmail());
-			helper.setSubject("Welcome to Quantumshare, Please verify your email address");
-			String htmlBody = readHtmlTemplate("verification_email_template.html");
+			String htmlBody = null;
+			if (type.equals("signup")) {
+//				String verificationLink = "http://localhost:3000/verify?token=" + userDto.getVerificationToken();
+				String verificationLink = "https://react.quantumparadigm.in/verify?token="
+						+ userDto.getVerificationToken();
+				helper.setSubject("Welcome to Quantumshare, Please verify your email address");
+				htmlBody = readHtmlTemplate("verification_email_template.html");
+				htmlBody = htmlBody.replace("{{VERIFICATION_LINK}}", verificationLink);
+
+			} else if (type.equals("email_updation")) {
+//				String verificationLink = "http://localhost:3000/verify/update?token=" + userDto.getVerificationToken();
+				String verificationLink = "https://react.quantumparadigm.in/verify/update?token="
+						+ userDto.getVerificationToken();
+				helper.setSubject("Secure Your Account: Confirm Your Email Change");
+				htmlBody = readHtmlTemplate("email_updation.html");
+				htmlBody = htmlBody.replace("{{VERIFICATION_LINK}}", verificationLink);
+			} else if (type.equals("password_reset_request")) {
+//				String verificationLink = "http://localhost:3000/user/rest_password/request?token="
+//						+ userDto.getVerificationToken();
+				String verificationLink = "https://react.quantumparadigm.in/user/rest_password/request?token="
+						+ userDto.getVerificationToken();
+				helper.setSubject("Quantum Share: Password Reset Request");
+				htmlBody = readHtmlTemplate("password_reset_request.html");
+				htmlBody = htmlBody.replace("{{RESET_PASSWORD_LINK}}", verificationLink);
+			}
+
+			else if (type.equals("password_updation")) {
+				helper.setSubject("Your Quantum Share Password Has Been Updated\"");
+				htmlBody = readHtmlTemplate("password_successful_updation.html");
+			}
 			htmlBody = htmlBody.replace("{{USERNAME}}", userDto.getFirstName() + " " + userDto.getLastName());
-			htmlBody = htmlBody.replace("{{VERIFICATION_LINK}}", verificationLink);
 			helper.setText(htmlBody, true);
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();

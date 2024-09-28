@@ -43,7 +43,6 @@ public class LinkedInProfilePostService {
 		String accessToken = linkedInProfileUser.getLinkedinProfileAccessToken();
 
 		try {
-			System.out.println("Caption: " + caption);
 			String url = "https://api.linkedin.com/v2/ugcPosts";
 			String requestBody = "{\"author\":\"urn:li:person:" + profileURN
 					+ "\",\"lifecycleState\":\"PUBLISHED\",\"specificContent\":{\"com.linkedin.ugc.ShareContent\":{\"shareCommentary\":{\"text\":\""
@@ -141,8 +140,6 @@ public class LinkedInProfilePostService {
 		String profileURN = linkedInProfileUser.getLinkedinProfileURN();
 		String accessToken = linkedInProfileUser.getLinkedinProfileAccessToken();
 		try {
-			System.out.println("controller is here 1 " + caption + " " + mediaFile);
-
 			String recipeType = determineRecipeType(mediaFile);
 			String mediaType = determineMediaType(mediaFile);
 			JsonNode uploadResponse = registerUpload(recipeType, accessToken, profileURN);
@@ -152,8 +149,7 @@ public class LinkedInProfilePostService {
 			uploadImage(uploadUrl, mediaFile, accessToken);
 			ResponseStructure<String> postResponse = createLinkedInPost(mediaAsset, caption, mediaType, accessToken,
 					profileURN);
-			System.out.println(postResponse);
-
+			
 			handlePostResponse(response, postResponse);
 
 		} catch (HttpClientErrorException.TooManyRequests e) {
@@ -232,8 +228,7 @@ public class LinkedInProfilePostService {
 	}
 
 	private JsonNode registerUpload(String recipeType, String accessToken, String profileURN) throws IOException {
-		System.out.println("controller is here 2 " + recipeType);
-
+		
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		headers.set("Authorization", "Bearer " + accessToken);
@@ -294,7 +289,6 @@ public class LinkedInProfilePostService {
 			String accessToken, String profileURN) {
 
 		try {
-			System.out.println("controller is here 4 " + caption + " " + mediaAsset);
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			headers.set("Authorization", "Bearer " + accessToken);
 
@@ -318,7 +312,6 @@ public class LinkedInProfilePostService {
 					HttpMethod.POST, requestEntity, String.class);
 
 			if (responseEntity.getStatusCode() == HttpStatus.CREATED) {
-				System.out.println("Image with caption created successfully !!");
 				response.setStatus("Success");
 				response.setMessage("Posted To LinkedIn Profile");
 				response.setCode(HttpStatus.CREATED.value());
@@ -334,13 +327,11 @@ public class LinkedInProfilePostService {
 		return response;
 	}
 
-	public ResponseStructure<String> createPostPage(String caption, LinkedInProfileDto linkedInProfileUser) {
-		LinkedInPageDto pageDetails = linkedInProfileUser.getPages().get(0);
-		String pageURN = pageDetails.getLinkedinPageURN();
-		String accessToken = pageDetails.getLinkedinPageAccessToken();
+	public ResponseStructure<String> createPostPage(String caption, LinkedInPageDto linkedInPageUser) {
+		String pageURN = linkedInPageUser.getLinkedinPageURN();
+		String accessToken = linkedInPageUser.getLinkedinPageAccessToken();
 
 		try {
-			System.out.println("Caption: " + caption);
 			String url = "https://api.linkedin.com/v2/ugcPosts";
 			String requestBody = "{\"author\":\"urn:li:organization:" + pageURN
 					+ "\",\"lifecycleState\":\"PUBLISHED\",\"specificContent\":{\"com.linkedin.ugc.ShareContent\":{\"shareCommentary\":{\"text\":\""
@@ -357,30 +348,25 @@ public class LinkedInProfilePostService {
 				response.setMessage("Posted To LinkedIn Page");
 				response.setCode(HttpStatus.CREATED.value());
 				response.setData(responseEntity.getBody());
-				System.out.println("Response Body: " + responseEntity.getBody());
-			} else {
+				} else {
 				response.setStatus("Failure");
 				response.setMessage("Failed to create post");
 				response.setCode(responseEntity.getStatusCode().value());
 				response.setData(responseEntity.getBody());
-				System.out.println("Error Response: " + responseEntity.getBody());
-			}
+				}
 		} catch (HttpClientErrorException e) {
 			response.setStatus("Failure");
 			response.setMessage("HTTP Client Error: " + e.getStatusCode());
 			response.setCode(e.getStatusCode().value());
-			System.out.println("HttpClientErrorException: " + e.getMessage());
-		} catch (HttpServerErrorException e) {
+			} catch (HttpServerErrorException e) {
 			response.setStatus("Failure");
 			response.setMessage("HTTP Server Error: " + e.getStatusCode());
 			response.setCode(e.getStatusCode().value());
-			System.out.println("HttpServerErrorException: " + e.getMessage());
 			e.printStackTrace();
 		} catch (Exception e) {
 			response.setStatus("Failure");
 			response.setMessage("Internal Server Error: " + e.getMessage());
 			response.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-			System.out.println("Exception: " + e.getMessage());
 			e.printStackTrace();
 		}
 		return response;
@@ -388,10 +374,9 @@ public class LinkedInProfilePostService {
 
 	// SHARE IMAGE/VIDEO AND TEXT TO LINKEDIN PAGE/ORGANIZATION
 	public ResponseStructure<String> uploadImageToLinkedInPage(MultipartFile file, String caption,
-			LinkedInProfileDto linkedInProfileUser) {
-		LinkedInPageDto pageDetails = linkedInProfileUser.getPages().get(0);
-		String pageURN = "urn:li:organization:" + pageDetails.getLinkedinPageURN();
-		String accessToken = pageDetails.getLinkedinPageAccessToken();
+			LinkedInPageDto linkedInPageUser) {
+		String pageURN = "urn:li:organization:" + linkedInPageUser.getLinkedinPageURN();
+		String accessToken = linkedInPageUser.getLinkedinPageAccessToken();
 
 		try {
 			String recipeType = determineRecipeTypePage(file);
@@ -503,7 +488,6 @@ public class LinkedInProfilePostService {
 					HttpMethod.POST, requestEntity, JsonNode.class);
 
 			if (responseEntity.getStatusCode() == HttpStatus.CREATED) {
-				System.out.println("Image with caption created successfully !!");
 				response.setStatus("Success");
 				response.setMessage("Posted To LinkedIn Page");
 				response.setCode(HttpStatus.CREATED.value());

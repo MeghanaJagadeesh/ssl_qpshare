@@ -49,12 +49,6 @@ public class YoutubeService {
 	@Value("${youtube.token-uri}")
 	private String tokenUri;
 
-	@Value("${youtube.channel-details-uri}")
-	private String channelDetailsUri;
-
-	@Value("${youtube.auth-uri}")
-	private String authUri;
-
 	@Value("${youtube.scope}")
 	private String scope;
 
@@ -101,7 +95,6 @@ public class YoutubeService {
 		String authUri = "https://accounts.google.com/o/oauth2/v2/auth";
 		String ouath = authUri + "?response_type=code&client_id=" + clientId + "&redirect_uri=" + redirectUri
 				+ "&scope=" + scope + "&access_type=" + "offline" + "&prompt=" + "consent";
-		System.out.println(ouath);
 		structure.setCode(HttpStatus.OK.value());
 		structure.setStatus("success");
 		structure.setMessage("oauth_url generated successfully");
@@ -226,7 +219,6 @@ public class YoutubeService {
 	// Media Posting
 	public ResponseEntity<ResponseWrapper> postMediaToChannel(MediaPost mediaPost, MultipartFile mediaFile,
 			YoutubeUser user) {
-		System.out.println("Coming to Youtube Service");
 		if (user == null) {
 			structure.setMessage("Youtube user not found");
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -239,7 +231,6 @@ public class YoutubeService {
 		String contentType = mediaFile.getContentType();
 		try {
 			if (contentType != null && contentType.startsWith("video/")) {
-				System.out.println("Send video to Channel");
 				sendVideoToChannel(youtubeChannelId, mediaFile, mediaPost.getTitle(), mediaPost.getCaption());
 			} else {
 				structure.setMessage("Youtube:Unsupported media type");
@@ -269,8 +260,6 @@ public class YoutubeService {
 
 	public void sendVideoToChannel(String youtubeChannelId, MultipartFile mediaFile, String title, String caption)
 			throws IOException {
-		System.out.println("Coming to sendVideoToChannel method");
-
 		String uploadUrl = "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet";
 
 		headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -293,8 +282,7 @@ public class YoutubeService {
 				String.class);
 
 		if (response.getStatusCode() == HttpStatus.OK) {
-			System.out.println("Video sent successfully!");
-		} else {
+				} else {
 			System.err.println("Failed to send video. Status code: " + response.getStatusCode());
 			System.err.println("Response body: " + response.getBody());
 		}

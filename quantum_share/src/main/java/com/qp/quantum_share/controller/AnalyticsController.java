@@ -54,7 +54,6 @@ public class AnalyticsController {
 
 	@GetMapping("/get/recent/post")
 	public ResponseEntity<ResponseStructure<String>> getRecentPosts(@RequestParam(required = false) String postId) {
-		System.out.println(postId);
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
 			structure.setCode(115);
@@ -97,7 +96,6 @@ public class AnalyticsController {
 	
 	@GetMapping("/view/analytics")
 	public ResponseEntity<ResponseStructure<String>> viewAnalytics(@RequestParam String pid) {
-		System.out.println(pid);
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
 			structure.setCode(115);

@@ -80,7 +80,6 @@ public class PostController {
 			response.add(structure);
 			return new ResponseEntity<List<Object>>(response, HttpStatus.UNAUTHORIZED);
 		}
-		System.out.println("controller");
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
 		QuantumShareUser user = userDao.fetchUser(userId);
@@ -292,9 +291,6 @@ public class PostController {
 	@PostMapping("/post/file/linkedIn")
 	public ResponseEntity<ResponseWrapper> createPostTOProfile(MultipartFile mediaFile,
 			@ModelAttribute MediaPost mediaPost) {
-
-		System.out.println(mediaPost.getCaption());
-
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
 			structure.setCode(115);
@@ -372,7 +368,6 @@ public class PostController {
 				return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(structure),
 						HttpStatus.BAD_REQUEST);
 			} else {
-				System.out.println("In the Post Controller");
 				return postServices.postOnYoutube(mediaPost, mediaFile, user.getSocialAccounts());
 			}
 		} catch (NullPointerException e) {

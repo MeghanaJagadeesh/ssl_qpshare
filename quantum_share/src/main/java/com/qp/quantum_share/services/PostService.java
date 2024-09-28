@@ -14,6 +14,7 @@ import com.qp.quantum_share.dao.InstagramUserDao;
 import com.qp.quantum_share.dao.QuantumShareUserDao;
 import com.qp.quantum_share.dao.TelegramUserDao;
 import com.qp.quantum_share.dao.YoutubeUserDao;
+import com.qp.quantum_share.dto.LinkedInPageDto;
 import com.qp.quantum_share.dto.LinkedInProfileDto;
 import com.qp.quantum_share.dto.MediaPost;
 import com.qp.quantum_share.dto.QuantumShareUser;
@@ -172,10 +173,10 @@ public class PostService {
 	}
 
 	public ResponseEntity<ResponseWrapper> postOnLinkedIn(MediaPost mediaPost, MultipartFile mediaFile,
-			SocialAccounts socialAccounts) {
+			QuantumShareUser user) {
 
 		if (mediaPost.getMediaPlatform().contains("LinkedIn")) {
-			if (socialAccounts == null || socialAccounts.getLinkedInProfileDto() == null) {
+			if (user == null || user.getSocialAccounts().getLinkedInProfileDto() == null) {
 				structure.setMessage("Please connect your LinkedIn account");
 				structure.setCode(HttpStatus.NOT_FOUND.value());
 				structure.setPlatform("LinkedIn");
@@ -183,8 +184,8 @@ public class PostService {
 				structure.setData(null);
 				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
 			}
-
-			LinkedInProfileDto linkedInProfileUser = socialAccounts.getLinkedInProfileDto();
+			
+			LinkedInProfileDto linkedInProfileUser = user.getSocialAccounts().getLinkedInProfileDto();
 			ResponseStructure<String> response;
 
 			if (mediaFile != null && !mediaFile.isEmpty() && mediaPost.getCaption() != null
@@ -220,11 +221,11 @@ public class PostService {
 	}
 
 	public ResponseEntity<ResponseWrapper> postOnLinkedInPage(MediaPost mediaPost, MultipartFile mediaFile,
-			SocialAccounts socialAccounts) {
+			QuantumShareUser user) {
 		ResponseStructure<String> response;
 
 		if (mediaPost.getMediaPlatform().contains("LinkedIn")) {
-			if (socialAccounts == null || socialAccounts.getLinkedInProfileDto() == null) {
+			if (user == null ||user.getSocialAccounts().getLinkedInPages() == null) {
 				structure.setMessage("Please connect your LinkedIn account");
 				structure.setCode(HttpStatus.NOT_FOUND.value());
 				structure.setPlatform("LinkedIn");
@@ -233,19 +234,19 @@ public class PostService {
 				return new ResponseEntity<ResponseWrapper>(config.getResponseWrapper(structure), HttpStatus.NOT_FOUND);
 			}
 
-			LinkedInProfileDto linkedInProfileUser = socialAccounts.getLinkedInProfileDto();
+			LinkedInPageDto linkedInPageUser = user.getSocialAccounts().getLinkedInPages();
 
 			if (mediaFile != null && !mediaFile.isEmpty() && mediaPost.getCaption() != null
 					&& !mediaPost.getCaption().isEmpty()) {
 				// Both file and caption are present
 				response = linkedInProfilePostService.uploadImageToLinkedInPage(mediaFile, mediaPost.getCaption(),
-						linkedInProfileUser);
+						linkedInPageUser);
 			} else if (mediaPost.getCaption() != null && !mediaPost.getCaption().isEmpty()) {
 				// Only caption is present
-				response = linkedInProfilePostService.createPostPage(mediaPost.getCaption(), linkedInProfileUser);
+				response = linkedInProfilePostService.createPostPage(mediaPost.getCaption(), linkedInPageUser);
 			} else if (mediaFile != null && !mediaFile.isEmpty()) {
 				// Only file is present
-				response = linkedInProfilePostService.uploadImageToLinkedInPage(mediaFile, "", linkedInProfileUser);
+				response = linkedInProfilePostService.uploadImageToLinkedInPage(mediaFile, "", linkedInPageUser);
 			} else {
 				// Neither file nor caption are present
 				structure.setStatus("Failure");
@@ -274,11 +275,12 @@ public class PostService {
 
 	public ResponseEntity<ResponseWrapper> prePostOnLinkedIn(MediaPost mediaPost, MultipartFile mediaFile,
 			QuantumShareUser user) {
-		LinkedInProfileDto linkedInProfile = user.getSocialAccounts().getLinkedInProfileDto();
-		if (linkedInProfile.getLinkedinProfileURN() != null) {
-			return postOnLinkedIn(mediaPost, mediaFile, user.getSocialAccounts());
-		} else if (linkedInProfile.getPages().get(0).getLinkedinPageURN() != null) {
-			return postOnLinkedInPage(mediaPost, mediaFile, user.getSocialAccounts());
+		SocialAccounts accounts = user.getSocialAccounts();
+		
+		if (!accounts.isLinkedInPagePresent()) {
+			return postOnLinkedIn(mediaPost, mediaFile, user);
+		} else if (accounts.isLinkedInPagePresent()) {
+			return postOnLinkedInPage(mediaPost, mediaFile, user);
 		} else {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
 			structure.setMessage("user has not connected LinkedIn profile");

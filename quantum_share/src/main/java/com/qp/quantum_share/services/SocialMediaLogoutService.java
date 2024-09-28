@@ -158,7 +158,7 @@ public class SocialMediaLogoutService {
 
 	public ResponseEntity<ResponseStructure<String>> disconnectLinkedIn(QuantumShareUser user) {
 		SocialAccounts accounts = user.getSocialAccounts();
-		if (accounts == null || accounts.getLinkedInProfileDto() == null) {
+		if (accounts == null || (!accounts.isLinkedInPagePresent()&&accounts.getLinkedInProfileDto()==null)) {
 			structure.setCode(404);
 			structure.setMessage("LinkedIn account not linked to this user");
 			structure.setStatus("error");
@@ -166,11 +166,13 @@ public class SocialMediaLogoutService {
 			structure.setPlatform("LinkedIn");
 			return new ResponseEntity<>(structure, HttpStatus.NOT_FOUND);
 		}
-		LinkedInProfileDto deleteUser = accounts.getLinkedInProfileDto();
-		if (deleteUser.getLinkedinProfileURN() != null) {
+		LinkedInProfileDto deleteUser;
+		if (!accounts.isLinkedInPagePresent()) {
+			deleteUser=accounts.getLinkedInProfileDto();
 			accounts.setLinkedInProfileDto(null);
 			user.setSocialAccounts(accounts);
 			userDao.save(user);
+			
 			linkedInProfileDao.deleteUser(deleteUser);
 			structure.setCode(HttpStatus.OK.value());
 			structure.setMessage("LinkedIn Profile Disconnected Successfully");
@@ -178,9 +180,9 @@ public class SocialMediaLogoutService {
 			structure.setStatus("success");
 			structure.setData(null);
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
-		} else if (deleteUser.getPages().get(0).getLinkedinPageURN() != null) {
-			List<LinkedInPageDto> pages = deleteUser.getPages();
-			if (pages.isEmpty()) {
+		} else if (accounts.isLinkedInPagePresent()) {
+			LinkedInPageDto pages = accounts.getLinkedInPages();
+			if (pages==null) {
 				structure.setCode(HttpStatus.BAD_REQUEST.value());
 				structure.setMessage("No LinkedIn pages found for user");
 				structure.setStatus("error");
@@ -188,22 +190,19 @@ public class SocialMediaLogoutService {
 				structure.setData(null);
 				return ResponseEntity.badRequest().body(structure);
 			}
-			LinkedInPageDto linkedInPageDto = pages.get(0);
-			deleteUser.getPages().remove(linkedInPageDto);
-			linkedInPageDao.deletePage(linkedInPageDto);
-			if (deleteUser.getPages().isEmpty()) {
-				accounts.setLinkedInProfileDto(null);
-				linkedInProfileDao.deleteUser(deleteUser);
-				user.setSocialAccounts(null);
-				accountDao.deleteSocialAccount(accounts);
-			}
+			accounts.setLinkedInPages(null);
+			accounts.setLinkedInPagePresent(false);
+			user.setSocialAccounts(accounts);
 			userDao.save(user);
+			
+			linkedInPageDao.deletePage(pages);
+			
 			ResponseStructure<String> response = new ResponseStructure<>();
 			response.setCode(HttpStatus.OK.value());
 			response.setMessage("LinkedIn Page Disconnected Successfully");
 			response.setStatus("success");
 			response.setPlatform("LinkedIn");
-			response.setData("Page '" + linkedInPageDto.getLinkedinPageName() + "' disconnected successfully");
+			response.setData(" disconnected successfully");
 			return ResponseEntity.ok(response);
 		}
 		return null;

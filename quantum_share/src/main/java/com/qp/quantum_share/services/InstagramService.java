@@ -166,7 +166,6 @@ public class InstagramService {
 				}
 				GraphResponse response = client.publish(instagramUserId + "/media_publish", GraphResponse.class,
 						Parameter.with("creation_id", containerId));
-				System.out.println("video " + response);
 				if (response.isSuccess()) {
 					user.setCredit(user.getCredit() - 1);
 					userDao.save(user);
@@ -225,7 +224,6 @@ public class InstagramService {
 
 	private ResponseEntity<ResponseWrapper> postImageToMedia(String instagramUserId, String fileUrl, String caption,
 			String accessToken, QuantumShareUser user, String profileName) {
-		System.out.println(fileUrl);
 		try {
 			FacebookClient client = configuration.getFacebookClient(accessToken);
 			GraphResponse container = client.publish(instagramUserId + "/media", GraphResponse.class,
@@ -234,7 +232,6 @@ public class InstagramService {
 			String containerId = container.getId();
 			GraphResponse response = client.publish(instagramUserId + "/media_publish", GraphResponse.class,
 					Parameter.with("creation_id", containerId));
-			System.out.println(response);
 			if (response.isSuccess()) {
 
 				user.setCredit(user.getCredit() - 1);
@@ -246,7 +243,6 @@ public class InstagramService {
 				successResponse.setStatus("success");
 				successResponse.setData(response);
 				successResponse.setPlatform("instagram");
-				System.out.println("instagram " + user.getCredit());
 				successResponse.setRemainingCredits(user.getCredit());
 				return new ResponseEntity<ResponseWrapper>(configuration.getResponseWrapper(successResponse),
 						HttpStatus.OK);

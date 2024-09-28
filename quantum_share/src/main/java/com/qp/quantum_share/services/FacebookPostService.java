@@ -157,7 +157,6 @@ public class FacebookPostService {
 						if (finalResponse.isSuccess()) {
 							qsuser.setCredit(qsuser.getCredit() - 1);
 							userDao.save(qsuser);
-							System.out.println();
 							analyticsPostService.savePost(finalResponse.getId(), facebookPageId, qsuser,
 									mediaFile.getContentType(), "facebook", pageName);
 							SuccessResponse succesresponse = config.getSuccessResponse();
@@ -185,7 +184,6 @@ public class FacebookPostService {
 							BinaryAttachment.with("source", mediaFile.getBytes()),
 							Parameter.with("message", mediaPost.getCaption()));
 					if (response.getId() != null) {
-						System.out.println("picture : " + response.getId());
 						analyticsPostService.savePost(response.getId(), facebookPageId, qsuser,
 								mediaFile.getContentType(), "facebook", pagename);
 						SuccessResponse succesresponse = config.getSuccessResponse();
@@ -239,23 +237,17 @@ public class FacebookPostService {
 	private ResponseEntity<JsonNode> postVideo(String facebookPageId, String pageAccessToken, MultipartFile mediaFile,
 			String message) {
 		try {
-			System.out.println("videp methid 1");
 			String url = "https://graph.facebook.com/v20.0/" + facebookPageId + "/videos";
 			headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 			headers.setBearerAuth(pageAccessToken);
 			body.add("file", mediaFile.getResource());
-			System.out.println(mediaFile.getResource());
 			if (mediaFile.isEmpty()) {
 				throw new IllegalArgumentException("File is empty.");
 			}
-			System.out.println(mediaFile.getContentType());
-			System.out.println(mediaFile.getInputStream().toString());
 			body.add("description", message);
 			HttpEntity<MultiValueMap<String, Object>> requestEntity = config.getHttpEntityWithMap(body, headers);
-			System.out.println(requestEntity);
 			ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity,
 					JsonNode.class);
-			System.out.println("response " + response.getBody());
 			return response;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -267,7 +259,6 @@ public class FacebookPostService {
 	public String createVideoUploadSession(FacebookClient client, String pageId, long fileSize) {
 		ResumableUploadStartResponse response = client.publish(pageId + "/videos", ResumableUploadStartResponse.class,
 				Parameter.with("upload_phase", "start"), Parameter.with("file_size", fileSize));
-		System.out.println(" createVideoUploadSession  :  " + response);
 		return response.getUploadSessionId();
 	}
 
@@ -277,7 +268,6 @@ public class FacebookPostService {
 				ResumableUploadTransferResponse.class, BinaryAttachment.with("video_file_chunk", vidFile),
 				Parameter.with("upload_phase", "transfer"), Parameter.with("start_offset", startOffset),
 				Parameter.with("upload_session_id", uploadSessionId));
-		System.out.println(" video chunnk : " + response);
 		return response.getStartOffset();
 	}
 
@@ -286,8 +276,6 @@ public class FacebookPostService {
 		GraphResponse response = client.publish(facebookPageId + "/videos", GraphResponse.class,
 				Parameter.with("upload_phase", "finish"), Parameter.with("upload_session_id", uploadSessionId),
 				Parameter.with("description", message));
-		System.out.println("response : " + response.toString() + "    ---   " + response);
-		System.out.println("finishVideoUploadSession : " + response.getPostId());
 		return response;
 	}
 

@@ -31,8 +31,6 @@ public class LinkedInProfileDto {
 	    @Column(length = 1000)
 	    private String linkedinProfileAccessToken;
 
-	    @OneToMany(mappedBy = "profile", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-	    private List<LinkedInPageDto> pages;
 
 
 }

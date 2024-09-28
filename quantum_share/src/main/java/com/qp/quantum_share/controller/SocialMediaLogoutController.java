@@ -47,6 +47,8 @@ public class SocialMediaLogoutController {
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("fb disconnect "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -71,6 +73,8 @@ public class SocialMediaLogoutController {
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("inst disconnect "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -96,6 +100,8 @@ public class SocialMediaLogoutController {
 		}
 		String jwtToken = token.substring(7);
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("tele disconnect "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -120,6 +126,8 @@ public class SocialMediaLogoutController {
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		Integer userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("linkedin disconnect "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -145,6 +153,8 @@ public class SocialMediaLogoutController {
 			}
 			String jwtToken = token.substring(7); // remove "Bearer " prefix
 			int userId = jwtUtilConfig.extractUserId(jwtToken);
+			System.out.println("youtube disconnect "+userId);
+			
 			QuantumShareUser user = userDao.fetchUser(userId);
 			if (user == null) {
 				structure.setCode(HttpStatus.NOT_FOUND.value());

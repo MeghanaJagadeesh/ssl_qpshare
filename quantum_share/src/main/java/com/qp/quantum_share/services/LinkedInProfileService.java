@@ -37,6 +37,9 @@ import com.qp.quantum_share.response.ResponseStructure;
 @Service
 public class LinkedInProfileService {
 
+	@Value("${default.profile.picture}")
+	private String defaultImageUrl;
+	
 	@Value("${linkedin.clientId}")
 	private String clientId;
 
@@ -107,13 +110,12 @@ public class LinkedInProfileService {
 		body.add("redirect_uri", redirectUri);
 
 		HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
-		System.out.println("exchangeAuthorizationCodeForAccessToken");
 		ResponseEntity<Map> responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, Map.class);
 		Map<String, Object> responseBody = responseEntity.getBody();
 		return responseBody != null ? (String) responseBody.get("access_token") : null;
 
 	}
-
+//profile
 	public ResponseEntity<ResponseStructure<String>> getUserInfoWithToken(String code, QuantumShareUser user)
 			throws IOException {
 		String accessToken = exchangeAuthorizationCodeForAccessToken(code);
@@ -154,7 +156,6 @@ public class LinkedInProfileService {
 
 		if (response.getStatusCode() == HttpStatus.OK) {
 			JsonNode responseBody = response.getBody();
-			System.out.println("responseBody " + responseBody);
 			Map<String, Object> map = config.getMap();
 			map.clear();
 			try {
@@ -171,34 +172,46 @@ public class LinkedInProfileService {
 					if (data instanceof String) {
 						imageUrl = (String) data;
 					} else {
-						imageUrl = "default_image_url";
+						imageUrl = defaultImageUrl;
 					}
 				} else {
-					imageUrl = "default_image_url";
+					imageUrl = defaultImageUrl;
 				}
 //				map.put("profile_sub", id);
 				map.put("linkedInUserName", localizedFirstName + " " + localizedLastName);
 //				map.put("access_token", accessToken);
 				map.put("linkedInProfilePic", imageUrl);
-
-				linkedInProfileDto.setLinkedinProfileURN(id);
-				linkedInProfileDto.setLinkedinProfileUserName(localizedFirstName + " " + localizedLastName);
-				linkedInProfileDto.setLinkedinProfileAccessToken(accessToken);
-				linkedInProfileDto.setLinkedinProfileImage(imageUrl); // Set profile image URL
-
-				SocialAccounts socialAccounts = user.getSocialAccounts();
-				if (socialAccounts == null) {
-
+				
+				SocialAccounts socialAccount = user.getSocialAccounts();
+				
+				if(socialAccount==null) {
+					linkedInProfileDto.setLinkedinProfileURN(id);
+					linkedInProfileDto.setLinkedinProfileUserName(localizedFirstName + " " + localizedLastName);
+					linkedInProfileDto.setLinkedinProfileAccessToken(accessToken);
+					linkedInProfileDto.setLinkedinProfileImage(imageUrl); // Set profile image URL
 					accounts.setLinkedInProfileDto(linkedInProfileDto);
+					accounts.setLinkedInPagePresent(false);
 					user.setSocialAccounts(accounts);
-				} else {
-					if (socialAccounts.getLinkedInProfileDto() == null) {
-						socialAccounts.setLinkedInProfileDto(linkedInProfileDto);
-					}
+				}else if(socialAccount.getLinkedInProfileDto()==null) {
+					
+					linkedInProfileDto.setLinkedinProfileURN(id);
+					linkedInProfileDto.setLinkedinProfileUserName(localizedFirstName + " " + localizedLastName);
+					linkedInProfileDto.setLinkedinProfileAccessToken(accessToken);
+					linkedInProfileDto.setLinkedinProfileImage(imageUrl); // Set profile image URL
+					socialAccount.setLinkedInProfileDto(linkedInProfileDto);
+					accounts.setLinkedInPagePresent(false);
+					user.setSocialAccounts(socialAccount);
+				}else {
+					LinkedInProfileDto exuser = socialAccount.getLinkedInProfileDto();
+					exuser.setLinkedinProfileURN(id);
+					exuser.setLinkedinProfileUserName(localizedFirstName + " " + localizedLastName);
+					exuser.setLinkedinProfileAccessToken(accessToken);
+					exuser.setLinkedinProfileImage(imageUrl); // Set profile image URL
+					socialAccount.setLinkedInProfileDto(exuser);
+					accounts.setLinkedInPagePresent(false);
+					user.setSocialAccounts(socialAccount);
 				}
-
 				userDao.saveUser(user);
-
 				return map;
 			} catch (Exception e) {
 				throw new CommonException(e.getMessage());
@@ -208,6 +221,84 @@ public class LinkedInProfileService {
 			return null;
 		}
 	}
+//page	
+	public ResponseEntity<ResponseStructure<List<LinkedInPageDto>>> getOrganizationsDetailsByProfile(String code,
+			QuantumShareUser user) throws IOException {
+		String accessToken = exchangeAuthorizationCodeForAccessToken(code);
+		return getOrganizationInfo(accessToken, user);
+	}
+
+	public ResponseEntity<ResponseStructure<List<LinkedInPageDto>>> getOrganizationInfo(String accessToken, QuantumShareUser user) {
+		headers.set("X-Restli-Protocol-Version", "2.0.0");
+		headers.set("Authorization", "Bearer " + accessToken);
+		HttpEntity<String> requestEntity = config.getHttpEntity(headers);
+		ResponseEntity<String> responseEntity;
+		try {
+			responseEntity = restTemplate.exchange("https://api.linkedin.com/v2/organizationAcls?q=roleAssignee",
+					HttpMethod.GET, requestEntity, String.class);
+		} catch (Exception e) {
+			ResponseStructure<List<LinkedInPageDto>> structure = new ResponseStructure<>();
+			structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+			structure.setMessage("Failed to make request");
+			structure.setStatus("error");
+			structure.setPlatform("LinkedIn");
+			structure.setData(null);
+			return new ResponseEntity<>(structure, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		ResponseStructure<List<LinkedInPageDto>> structure = new ResponseStructure<>();
+		if (responseEntity.getStatusCode() == HttpStatus.OK) {
+			String responseBody = responseEntity.getBody();
+
+			try {
+				JsonNode rootNode = objectMapper.readTree(responseBody);
+				JsonNode elementsNode = rootNode.path("elements");
+				if (elementsNode.isEmpty()) {
+					structure.setCode(HttpStatus.OK.value());
+					structure.setMessage("User does not have associated pages");
+					structure.setStatus("success");
+					structure.setPlatform("LinkedIn");
+					structure.setData(null);
+					return ResponseEntity.ok(structure);
+				} else {
+					List<String> organizationUrns = new ArrayList<>();
+					for (JsonNode pageNode : elementsNode) {
+						String organizationURN = pageNode.path("organization").asText();
+						organizationUrns.add(organizationURN);
+					}
+					List<String> organizationNames = getPageNamesFromLinkedInAPI(accessToken, organizationUrns);
+					List<LinkedInPageDto> data = new ArrayList<>();
+					for (int i = 0; i < organizationUrns.size(); i++) {
+						linkedInPageDto.setLinkedinPageURN(organizationUrns.get(i));
+						linkedInPageDto.setLinkedinPageAccessToken(accessToken);
+						linkedInPageDto.setLinkedinPageName(organizationNames.get(i));
+						data.add(linkedInPageDto);
+					}
+					structure.setCode(HttpStatus.OK.value());
+					structure.setMessage("LinkedIn associated pages");
+					structure.setStatus("success");
+					structure.setPlatform("LinkedIn");
+					structure.setData(data);
+					return ResponseEntity.ok(structure);
+				}
+			} catch (JsonProcessingException e) {
+				ResponseStructure<List<LinkedInPageDto>> errorResponse = new ResponseStructure<>();
+				errorResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+				errorResponse.setMessage("Failed to process JSON response");
+				errorResponse.setStatus("error");
+				errorResponse.setPlatform("LinkedIn");
+				errorResponse.setData(null);
+				return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+		} else {
+			structure.setCode(responseEntity.getStatusCode().value());
+			structure.setMessage("Failed to retrieve organization info");
+			structure.setStatus("error");
+			structure.setPlatform("LinkedIn");
+			structure.setData(null);
+			return new ResponseEntity<>(structure, responseEntity.getStatusCode());
+		}
+	}
+
 
 	public ResponseStructure<String> getLinkedInProfile(String accessToken) {
 		headers.setContentType(MediaType.TEXT_PLAIN);
@@ -264,86 +355,7 @@ public class LinkedInProfileService {
 		return responseStructure;
 	}
 
-	public ResponseEntity<ResponseStructure<List<LinkedInPageDto>>> getOrganizationsDetailsByProfile(String code,
-			QuantumShareUser user) throws IOException {
-		String accessToken = exchangeAuthorizationCodeForAccessToken(code);
-		return getOrganizationInfo(accessToken);
-	}
-
-	public ResponseEntity<ResponseStructure<List<LinkedInPageDto>>> getOrganizationInfo(String accessToken) {
-		headers.set("X-Restli-Protocol-Version", "2.0.0");
-		headers.set("Authorization", "Bearer " + accessToken);
-		HttpEntity<String> requestEntity = config.getHttpEntity(headers);
-		ResponseEntity<String> responseEntity;
-		System.out.println("getOrganizationInfo ");
-		try {
-			responseEntity = restTemplate.exchange("https://api.linkedin.com/v2/organizationAcls?q=roleAssignee",
-					HttpMethod.GET, requestEntity, String.class);
-		} catch (Exception e) {
-			ResponseStructure<List<LinkedInPageDto>> structure = new ResponseStructure<>();
-			structure.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-			structure.setMessage("Failed to make request");
-			structure.setStatus("error");
-			structure.setPlatform("LinkedIn");
-			structure.setData(null);
-			return new ResponseEntity<>(structure, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-		ResponseStructure<List<LinkedInPageDto>> structure = new ResponseStructure<>();
-		if (responseEntity.getStatusCode() == HttpStatus.OK) {
-			String responseBody = responseEntity.getBody();
-
-			try {
-				JsonNode rootNode = objectMapper.readTree(responseBody);
-				JsonNode elementsNode = rootNode.path("elements");
-
-				if (elementsNode.isEmpty()) {
-					structure.setCode(HttpStatus.OK.value());
-					structure.setMessage("User does not have associated pages");
-					structure.setStatus("success");
-					structure.setPlatform("LinkedIn");
-					structure.setData(null);
-					return ResponseEntity.ok(structure);
-				} else {
-					List<String> organizationUrns = new ArrayList<>();
-					for (JsonNode pageNode : elementsNode) {
-						String organizationURN = pageNode.path("organization").asText();
-						organizationUrns.add(organizationURN);
-					}
-					List<String> organizationNames = getPageNamesFromLinkedInAPI(accessToken, organizationUrns);
-					List<LinkedInPageDto> data = new ArrayList<>();
-					for (int i = 0; i < organizationUrns.size(); i++) {
-						linkedInPageDto.setLinkedinPageURN(organizationUrns.get(i));
-						linkedInPageDto.setLinkedinPageAccessToken(accessToken);
-						linkedInPageDto.setLinkedinPageName(organizationNames.get(i));
-						data.add(linkedInPageDto);
-					}
-					structure.setCode(HttpStatus.OK.value());
-					structure.setMessage("LinkedIn associated pages");
-					structure.setStatus("success");
-					structure.setPlatform("LinkedIn");
-					structure.setData(data);
-					return ResponseEntity.ok(structure);
-				}
-			} catch (JsonProcessingException e) {
-				ResponseStructure<List<LinkedInPageDto>> errorResponse = new ResponseStructure<>();
-				errorResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-				errorResponse.setMessage("Failed to process JSON response");
-				errorResponse.setStatus("error");
-				errorResponse.setPlatform("LinkedIn");
-				errorResponse.setData(null);
-				return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-			}
-		} else {
-			structure.setCode(responseEntity.getStatusCode().value());
-			structure.setMessage("Failed to retrieve organization info");
-			structure.setStatus("error");
-			structure.setPlatform("LinkedIn");
-			structure.setData(null);
-			return new ResponseEntity<>(structure, responseEntity.getStatusCode());
-		}
-	}
-
-	private List<String> getPageNamesFromLinkedInAPI(String accessToken, List<String> organizationUrns) {
+		private List<String> getPageNamesFromLinkedInAPI(String accessToken, List<String> organizationUrns) {
 		List<String> pageNames = new ArrayList<>();
 
 		headers.set("Authorization", "Bearer " + accessToken);
@@ -405,26 +417,19 @@ public class LinkedInProfileService {
 			Integer firstDegreeSize = (Integer) networkSizeResponse.getData();
 			selectedLinkedInPageDto.setLinkedinPageImage(logoUrl);
 			selectedLinkedInPageDto.setLinkedinPageFollowers(firstDegreeSize);
-
+			selectedLinkedInPageDto.setLinkedinPageURN(organizationId);
+			
+			
 			SocialAccounts socialAccounts = user.getSocialAccounts();
 			if (socialAccounts == null) {
-				socialAccounts = accounts;
+				accounts.setLinkedInPages(selectedLinkedInPageDto);
+				accounts.setLinkedInPagePresent(true);
+				user.setSocialAccounts(socialAccounts);	
+			}else if(socialAccounts.getLinkedInPages()==null) {
+				socialAccounts.setLinkedInPages(selectedLinkedInPageDto);
+				socialAccounts.setLinkedInPagePresent(true);
+				user.setSocialAccounts(socialAccounts);
 			}
-			LinkedInProfileDto linkedInProfileDto = socialAccounts.getLinkedInProfileDto();
-			if (linkedInProfileDto == null) {
-				linkedInProfileDto = new LinkedInProfileDto();
-				socialAccounts.setLinkedInProfileDto(linkedInProfileDto);
-			}
-			selectedLinkedInPageDto.setLinkedinPageURN(organizationId);
-			selectedLinkedInPageDto.setProfile(linkedInProfileDto);
-			List<LinkedInPageDto> pages = linkedInProfileDto.getPages();
-			if (pages == null) {
-				pages = new ArrayList<>();
-			}
-			pages.add(selectedLinkedInPageDto);
-			linkedInProfileDto.setPages(pages);
-
-			user.setSocialAccounts(socialAccounts);
 			userDao.saveUser(user);
 			response.setCode(HttpStatus.OK.value());
 			response.setMessage(selectedLinkedInPageDto.getLinkedinPageName());
@@ -457,7 +462,6 @@ public class LinkedInProfileService {
 	public ResponseStructure<Integer> getNetworkSize(String accessToken, String organizationId) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
-		System.out.println(accessToken);
 		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
 		HttpEntity<String> entity = config.getHttpEntity(headers);
@@ -465,8 +469,7 @@ public class LinkedInProfileService {
 		String url = "https://api.linkedin.com/v2/networkSizes/urn:li:organization:" + organizationId
 				+ "?edgeType=CompanyFollowedByMember";
 		ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-		System.out.println("after");
-
+		
 		ResponseStructure<Integer> responseStructure = new ResponseStructure<>();
 		if (response.getStatusCode().is2xxSuccessful()) {
 			try {

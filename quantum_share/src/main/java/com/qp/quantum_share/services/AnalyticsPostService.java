@@ -81,7 +81,6 @@ public class AnalyticsPostService {
 		post.setProfileName(profileName);
 		List<SocialMediaPosts> posts = qsuser.getPosts();
 		if (posts.isEmpty()) {
-			System.out.println("if");
 			List<SocialMediaPosts> list = config.getListOfPost();
 			posts = list;
 			posts.add(post);
@@ -93,9 +92,8 @@ public class AnalyticsPostService {
 	}
 
 	public ResponseEntity<ResponseStructure<String>> getRecentPost(String postId, QuantumShareUser user) {
-		System.out.println("service");
 		SocialMediaPosts post = postsDao.getPostByPostId(postId);
-		System.out.println(post);
+//		System.out.println(post);
 		if (post == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
 			structure.setMessage("Invalid PostId");
@@ -105,13 +103,11 @@ public class AnalyticsPostService {
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
 		}
 		if (post.getPlatformName().equals("facebook")) {
-			System.out.println(1);
 			List<FacebookPageDetails> pages = user.getSocialAccounts().getFacebookUser().getPageDetails();
 			Optional<FacebookPageDetails> filteredPage = pages.stream()
 					.filter(page -> page.getFbPageId().equals(post.getProfileId())).findFirst();
 			FacebookPageDetails page = null;
 			if (filteredPage.isPresent()) {
-				System.out.println(2);
 				page = filteredPage.get();
 			} else {
 				structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -151,7 +147,9 @@ public class AnalyticsPostService {
 			ResponseEntity<JsonNode> response = restTemplate.exchange(
 					"https://graph.facebook.com/v20.0/" + postId + "?fields=media_url", HttpMethod.GET, entity,
 					JsonNode.class);
-			post.setImageUrl(response.getBody().get("media_url").asText());
+			post.setImageUrl(response.getBody().has("media_url") 
+                    ? response.getBody().get("media_url").asText() 
+                    : null);
 			userDao.save(user);
 			structure.setCode(HttpStatus.OK.value());
 			structure.setData(post);
@@ -186,7 +184,6 @@ public class AnalyticsPostService {
 	public ResponseEntity<ResponseStructure<String>> viewAnalytics(QuantumShareUser user, String pid) {
 		try {
 			SocialMediaPosts post = postsDao.getPost(Integer.parseInt(pid));
-			System.out.println(post);
 			if (post == null) {
 				structure.setCode(HttpStatus.NOT_FOUND.value());
 				structure.setMessage("Invalid PostId");
@@ -197,10 +194,8 @@ public class AnalyticsPostService {
 			}
 			if (post.getPlatformName().equals("facebook")) {
 				if (post.getMediaType().startsWith("image")) {
-					System.out.println("image");
 					return facebookImageAnalytics(user, pid);
 				} else {
-					System.out.println("video");
 					return facebookVideoAnalytics(user, pid);
 				}
 			} else if (post.getPlatformName().equals("instagram")) {
@@ -214,9 +209,10 @@ public class AnalyticsPostService {
 		}
 	}
 
-	private ResponseEntity<ResponseStructure<String>> facebookVideoAnalytics(QuantumShareUser user, String pid) {
+	private ResponseEntity<ResponseStructure<String>> facebookVideoAnalytics(QuantumShareUser user, String pid) throws JsonMappingException, JsonProcessingException {
+		SocialMediaPosts post = postsDao.getPost(Integer.parseInt(pid));
 		try {
-			SocialMediaPosts post = postsDao.getPost(Integer.parseInt(pid));
+
 			List<FacebookPageDetails> list = user.getSocialAccounts().getFacebookUser().getPageDetails();
 			Optional<FacebookPageDetails> filteredPage = list.stream()
 					.filter(page -> page.getFbPageId().equals(post.getProfileId())).findFirst();
@@ -232,7 +228,8 @@ public class AnalyticsPostService {
 				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
 			}
 			String url = "https://graph.facebook.com/v20.0/" + post.getPostid()
-					+ "/video_insights?metric=total_video_views,total_video_impressions,total_video_reactions_by_type_total&access_token="
+					+ "/video_insights"
+//					+ "?metric=total_video_views,total_video_impressions,total_video_reactions_by_type_total&access_token="
 					+ page.getFbPageAceessToken();
 			headers.setBearerAuth(page.getFbPageAceessToken());
 			HttpEntity<String> entity = config.getHttpEntity(headers);
@@ -245,12 +242,12 @@ public class AnalyticsPostService {
 				Object value = node.path("values").get(0).path("value");
 				insights.put(name, value);
 			}
-			System.out.println("checked");
 			ResponseEntity<JsonNode> response1 = restTemplate.exchange(
-					"https://graph.facebook.com/v20.0/" + post.getPostid() + "?fields=description", HttpMethod.GET, entity,
-					JsonNode.class);
-			System.out.println(response1.getBody());
-			String description = response1.getBody().has("description") ? response1.getBody().get("description").asText() : null;
+					"https://graph.facebook.com/v20.0/" + post.getPostid() + "?fields=description", HttpMethod.GET,
+					entity, JsonNode.class);
+			String description = response1.getBody().has("description")
+					? response1.getBody().get("description").asText()
+					: null;
 			insights.put("description", description);
 			insights.put("full_picture", post.getImageUrl());
 			insights.put("media_type", post.getMediaType());
@@ -260,7 +257,29 @@ public class AnalyticsPostService {
 			structure.setPlatform("Facebook");
 			structure.setStatus("success");
 			return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
-		} catch (Exception e) {
+		} catch (HttpClientErrorException e) {
+			String errorMessage = e.getResponseBodyAsString();
+			JsonNode json = objectMapper.readTree(errorMessage);
+			String mesg = json.get("error").get("message").asText();
+			if (mesg.contains("Unsupported get request. Object with ID '" + post.getPostid() + "' does not exist")) {
+				user.getPosts().remove(post);
+				userDao.save(user);
+				postsDao.deletePosts(post);
+
+				structure.setCode(117);
+				structure.setMessage("This Post is not available in Facebook page");
+				structure.setPlatform("facebook");
+				structure.setStatus("error");
+				structure.setData(null);
+				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.OK);
+			} else {
+				e.printStackTrace();
+				throw new CommonException(e.getMessage());
+			}
+
+		} catch (JsonMappingException e) {
+			throw new CommonException(e.getMessage());
+		} catch (JsonProcessingException e) {
 			throw new CommonException(e.getMessage());
 		}
 	}
@@ -283,16 +302,15 @@ public class AnalyticsPostService {
 				structure.setData(null);
 				return new ResponseEntity<ResponseStructure<String>>(structure, HttpStatus.NOT_FOUND);
 			}
-			String likeUrl = "https://graph.facebook.com/v20.0/" + post.getPostid()
+			String likeUrl = "https://graph.facebook.com/v20.0/" + post.getProfileId()+"_"+post.getPostid()
 					+ "/insights?metric=post_reactions_by_type_total&access_token=" + page.getFbPageAceessToken();
-			String commentUrl = "https://graph.facebook.com/v20.0/" + post.getPostid()
+			String commentUrl = "https://graph.facebook.com/v20.0/" + post.getProfileId()+"_"+post.getPostid()
 					+ "?fields=likes.summary(true)&access_token=" + page.getFbPageAceessToken();
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			HttpEntity<String> entity = config.getHttpEntity(headers);
 			ResponseEntity<String> likeResponse = restTemplate.exchange(likeUrl, HttpMethod.GET, entity, String.class);
 			ResponseEntity<String> commentResponse = restTemplate.exchange(commentUrl, HttpMethod.GET, entity,
 					String.class);
-			System.out.println(likeResponse + "\n " + commentResponse);
 			Map<String, Object> responseData = config.getMap();
 
 			JsonNode likeData = objectMapper.readTree(likeResponse.getBody());
@@ -312,10 +330,9 @@ public class AnalyticsPostService {
 			headers.setBearerAuth(page.getFbPageAceessToken());
 			HttpEntity<String> entity1 = config.getHttpEntity(headers);
 			ResponseEntity<JsonNode> response1 = restTemplate.exchange(
-					"https://graph.facebook.com/v20.0/" + post.getPostid() + "?fields=name", HttpMethod.GET, entity1,
+					"https://graph.facebook.com/v20.0/" +post.getProfileId()+"_"+post.getPostid() + "?fields=message", HttpMethod.GET, entity1,
 					JsonNode.class);
-			System.out.println("1  " + response1);
-			String description = response1.getBody().get("name").asText();
+			String description = response1.getBody().path("message").asText();
 			responseData.put("description", description);
 			responseData.put("full_picture", post.getImageUrl());
 			responseData.put("media_type", post.getMediaType());
@@ -370,7 +387,6 @@ public class AnalyticsPostService {
 			headers.setBearerAuth(instagramUser.getInstUserAccessToken());
 			HttpEntity<String> entity = config.getHttpEntity(headers);
 			ResponseEntity<JsonNode> response = restTemplate.exchange(apiUrl, HttpMethod.GET, entity, JsonNode.class);
-			System.out.println(response.getBody());
 			Map<String, Object> insights = config.getMap();
 			insights.clear();
 			JsonNode data = response.getBody().path("data");

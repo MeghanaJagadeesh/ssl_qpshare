@@ -28,8 +28,5 @@ public class LinkedInPageDto {
     @Column(length = 1000)
     private String linkedinPageAccessToken;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_Uid")
-    private LinkedInProfileDto profile;
 }
  

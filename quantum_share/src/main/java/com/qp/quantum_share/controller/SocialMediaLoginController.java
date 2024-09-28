@@ -88,6 +88,7 @@ public class SocialMediaLoginController {
 		}
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("fb verify token "+userId);
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -121,6 +122,8 @@ public class SocialMediaLoginController {
 		}
 		String jwtToken = token.substring(7);
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("insta verify token "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -211,6 +214,8 @@ public class SocialMediaLoginController {
 		}
 		String jwtToken = token.substring(7);
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("telegram verify token "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -222,7 +227,7 @@ public class SocialMediaLoginController {
 		return telegramService.generateTelegramCode(user);
 	}
 
-	// Fetching Group Details
+// Fetching Group Details
 	@GetMapping("/telegram/user/authorization")
 	public ResponseEntity<ResponseStructure<String>> getGroupDetails() {
 		String token = request.getHeader("Authorization");
@@ -236,6 +241,8 @@ public class SocialMediaLoginController {
 		}
 		String jwtToken = token.substring(7);
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("telegram auth "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -247,7 +254,7 @@ public class SocialMediaLoginController {
 		return telegramService.pollTelegramUpdates(user);
 	}
 
-	// LinkedInConnect
+// LinkedInConnect
 	@GetMapping("/linkedin/connect")
 	public ResponseEntity<ResponseStructure<String>> login() {
 
@@ -295,8 +302,6 @@ public class SocialMediaLoginController {
 		QuantumShareUser user = userDao.fetchUser(userId);
 
 		if (user == null) {
-			// User is not found
-			// Customize the error response
 			authUrlParams.put("status", "error");
 			authUrlParams.put("code", String.valueOf(HttpStatus.NOT_FOUND.value()));
 			authUrlParams.put("message", "user doesn't exist, please sign up");
@@ -305,8 +310,6 @@ public class SocialMediaLoginController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(authUrlParams);
 		}
 
-		// User is authenticated and authorized
-		// Generate the authorization URL and return a redirect response
 		Map<String, String> authUrlParamsBody = getLinkedInAuth().getBody();
 		if (authUrlParamsBody != null) {
 			authUrlParams.putAll(authUrlParamsBody);
@@ -326,8 +329,6 @@ public class SocialMediaLoginController {
 	@PostMapping("/linkedin/callback/success")
 	public ResponseEntity<?> callbackEndpoint(@RequestParam("code") String code, @RequestParam("type") String type) {
 		try {
-			System.out.println("code = " + code);
-			System.out.println("type = " + type);
 			String token = request.getHeader("Authorization");
 			if (token == null || !token.startsWith("Bearer ")) {
 				return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -336,6 +337,8 @@ public class SocialMediaLoginController {
 
 			String jwtToken = token.substring(7); // remove "Bearer " prefix
 			int userId = jwtUtilConfig.extractUserId(jwtToken);
+			System.out.println("linkedin callback "+userId);
+			
 			QuantumShareUser user = userDao.fetchUser(userId);
 
 			if (user == null) {
@@ -374,7 +377,6 @@ public class SocialMediaLoginController {
 	public ResponseEntity<ResponseStructure<Map<String, Object>>> saveSelectedPage(
 			@RequestBody LinkedInPageDto selectedLinkedInPageDto) {
 		ResponseStructure<Map<String, Object>> structure = new ResponseStructure<>();
-		System.out.println("controller");
 		String token = request.getHeader("Authorization");
 		if (token == null || !token.startsWith("Bearer ")) {
 			structure.setCode(115);
@@ -387,6 +389,8 @@ public class SocialMediaLoginController {
 
 		String jwtToken = token.substring(7); // remove "Bearer " prefix
 		int userId = jwtUtilConfig.extractUserId(jwtToken);
+		System.out.println("linkedin select page "+userId);
+		
 		QuantumShareUser user = userDao.fetchUser(userId);
 		if (user == null) {
 			structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -413,6 +417,8 @@ public class SocialMediaLoginController {
 			}
 			String jwtToken = token.substring(7);
 			int userId = jwtUtilConfig.extractUserId(jwtToken);
+			System.out.println("youtube xonnect "+userId);
+			
 			QuantumShareUser user = userDao.fetchUser(userId);
 			if (user == null) {
 				structure.setCode(HttpStatus.NOT_FOUND.value());
@@ -438,6 +444,8 @@ public class SocialMediaLoginController {
 			}
 			String jwtToken = token.substring(7); 
 			int userId = jwtUtilConfig.extractUserId(jwtToken);
+			System.out.println("youtube verify token "+userId);
+			
 			QuantumShareUser user = userDao.fetchUser(userId);
 			if (user == null) {
 				structure.setCode(HttpStatus.NOT_FOUND.value());
